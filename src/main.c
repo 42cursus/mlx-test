@@ -10,64 +10,141 @@
 /*                                                                            */
 /* ************************************************************************** */
 
+#include <sysexits.h>
 #include "mlx-test.h"
 
-static void set_fullscreen(Display *dpy, Window win, int fullscreen)
+
+void mlx_allow_resize_win(Display *display, Window win)
 {
-	Atom wm_state = XInternAtom(dpy, "_NET_WM_STATE", False);
+	XSizeHints	hints;
+	long		supplied;
+
+	if (XGetWMNormalHints(display, win, &hints, &supplied))
+	{
+		hints.min_width = 1;
+		hints.min_height = 1;
+		hints.max_width = DisplayWidth(display, DefaultScreen(display));
+		hints.max_height = DisplayHeight(display, DefaultScreen(display));
+		hints.flags &= ~(PMinSize | PMaxSize);
+		XSetWMNormalHints(display, win, &hints);
+	}
+}
+
+static void toggle_fullscreen(t_info *const app)
+{
+	Display *dpy = app->mlx->display;
+	Window win = app->root->window;
+
 	Atom wm_fullscreen = XInternAtom(dpy, "_NET_WM_STATE_FULLSCREEN", False);
 
 	XEvent xev = {0};
 	xev.type = ClientMessage;
 	xev.xclient.window = win;
-	xev.xclient.message_type = wm_state;
+	xev.xclient.message_type = XInternAtom(dpy, "_NET_WM_STATE", False);
 	xev.xclient.format = 32;
-	xev.xclient.data.l[0] = fullscreen ? 1
-									   : 0; // 1 = add fullscreen, 0 = remove fullscreen
-	xev.xclient.data.l[1] = wm_fullscreen;
+	xev.xclient.data.l[0] = (long[]){0, 1}[app->fullscreen];
+	xev.xclient.data.l[1] = (long)wm_fullscreen;
 	xev.xclient.data.l[2] = 0;
 	xev.xclient.data.l[3] = 1;
 	xev.xclient.data.l[4] = 0;
-
-	XSendEvent(dpy, DefaultRootWindow(dpy), False,
+	if (app->fullscreen)
+		mlx_allow_resize_win(app->mlx->display, app->root->window);
+	XSendEvent(dpy, app->mlx->root, False,
 			   SubstructureNotifyMask | SubstructureRedirectMask,
 			   &xev);
+	if (!app->fullscreen)
+		mlx_int_anti_resize_win(app->mlx, app->root->window,
+								WIN_WIDTH, WIN_HEIGHT);
 }
 
+__attribute__ ((noreturn))
+int	exit_win(t_info *const	app)
+{
+	cleanup(app);
+	_exit(EX_OK);
+}
+
+int key_press(KeySym key, void *param)
+{
+	t_info *const app = param;
+
+	if (key == XK_F11)
+	{
+		app->fullscreen = !app->fullscreen;
+		toggle_fullscreen(app);
+		mlx_do_sync(app->mlx);
+	}
+	if (key == XK_Escape)
+		app->mlx->end_loop = 1;
+	return (0);
+}
+
+size_t	get_time_us(void)
+{
+	struct timeval	current_time;
+
+	gettimeofday(&current_time, NULL);
+	return (current_time.tv_sec * 1000000 + current_time.tv_usec);
+}
+
+void on_expose(t_info *app)
+{
+	mlx_put_image_to_window(app->mlx, app->root,
+							app->canvas, app->clip_x_origin,
+							app->clip_y_origin);
+}
+
+int	render(void *param)
+{
+	size_t time;
+	t_info *const app = param;
+
+	time = get_time_us();
+	app->last_frame = time;
+	while (get_time_us() - app->last_frame < app->fr_delay)
+		usleep(100);
+	on_expose(app);
+	return (0);
+}
+
+void fill_with_colour(t_img *img, int f_col, int c_col)
+{
+	const int	mid = img->height / 2;
+	int			i;
+	int			j;
+
+	u_int (*pixels)[img->height][img->width] = (void *)img->data;
+	i = -1;
+	while (++i <= mid)
+	{
+		j = -1;
+		while (++j < img->width)
+			(*pixels)[i][j] = c_col;
+	}
+	i--;
+	while (++i < img->height)
+	{
+		j = -1;
+		while (++j < img->width)
+			(*pixels)[i][j] = f_col;
+	}
+}
+
+
+__attribute__ ((noreturn))
 int main(void)
 {
-	t_info *const	app = &(t_info){.title = (char *)"mlx-test"};
+	t_info	*const	app = &(t_info){.title = (char *)"mlx-test"};
 
 	app->mlx = mlx_init();
-	Display	*dpy = app->mlx->display;
-	int		screen = app->mlx->screen;
-	Window	root = app->mlx->root;
-	Window	win = XCreateSimpleWindow(dpy, root, 10, 10, 640, 480, 1,
-									 BlackPixel(dpy, screen),
-									 WhitePixel(dpy, screen));
-	XSelectInput(dpy, win, KeyPressMask | StructureNotifyMask);
-	XMapWindow(dpy, win);
+	app->root = mlx_new_window(app->mlx, WIN_WIDTH,
+						WIN_HEIGHT, app->title);
+	app->canvas = mlx_new_image(app->mlx, WIN_WIDTH, WIN_HEIGHT);
+	fill_with_colour(app->canvas, 0x00ff0000, 0x0000dd00);
+	mlx_hook(app->root, DestroyNotify, 0, (void *)&exit_win, app);
+	mlx_hook(app->root, KeyPress, KeyPressMask, (void *) &key_press, app);
 
-	while (1)
-	{
-		XEvent ev;
-		XNextEvent(dpy, &ev);
-
-		if (ev.type == KeyPress)
-		{
-			KeySym keysym = XLookupKeysym(&ev.xkey, 0);
-			if (keysym == XK_F11)
-			{
-				app->fullscreen = !app->fullscreen;
-				set_fullscreen(dpy, win, app->fullscreen);
-			}
-			if (keysym == XK_Escape)
-				break; // exit on ESC
-		}
-	}
-
-	XDestroyWindow(dpy, win);
-	XCloseDisplay(dpy);
-	free(app->mlx);
-	return 0;
+	mlx_loop_hook(app->mlx, &render, app);
+	mlx_loop(app->mlx);
+	exit_win(app);
 }
