@@ -1,0 +1,4 @@
+[submodule "lib/minilibx-linux"]
+	path = lib/minilibx-linux
+	url = git@github.com:42cursus/minilibx-linux.git
+	branch = master

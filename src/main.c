@@ -10,8 +10,7 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <X11/Xlib.h>
-#include <X11/keysym.h>
+#include "mlx-test.h"
 
 static void set_fullscreen(Display *dpy, Window win, int fullscreen)
 {
@@ -37,19 +36,19 @@ static void set_fullscreen(Display *dpy, Window win, int fullscreen)
 
 int main(void)
 {
-	Display *dpy = XOpenDisplay(NULL);
-	int screen = DefaultScreen(dpy);
-	Window root = RootWindow(dpy, screen);
+	t_info *const	app = &(t_info){.title = (char *)"mlx-test"};
 
-	Window win = XCreateSimpleWindow(dpy, root, 10, 10, 640, 480, 1,
+	app->mlx = mlx_init();
+	Display	*dpy = app->mlx->display;
+	int		screen = app->mlx->screen;
+	Window	root = app->mlx->root;
+	Window	win = XCreateSimpleWindow(dpy, root, 10, 10, 640, 480, 1,
 									 BlackPixel(dpy, screen),
 									 WhitePixel(dpy, screen));
 	XSelectInput(dpy, win, KeyPressMask | StructureNotifyMask);
 	XMapWindow(dpy, win);
 
-	int fullscreen = 0;
-
-	for (;;)
+	while (1)
 	{
 		XEvent ev;
 		XNextEvent(dpy, &ev);
@@ -59,8 +58,8 @@ int main(void)
 			KeySym keysym = XLookupKeysym(&ev.xkey, 0);
 			if (keysym == XK_F11)
 			{
-				fullscreen = !fullscreen;
-				set_fullscreen(dpy, win, fullscreen);
+				app->fullscreen = !app->fullscreen;
+				set_fullscreen(dpy, win, app->fullscreen);
 			}
 			if (keysym == XK_Escape)
 				break; // exit on ESC
@@ -69,6 +68,6 @@ int main(void)
 
 	XDestroyWindow(dpy, win);
 	XCloseDisplay(dpy);
+	free(app->mlx);
 	return 0;
 }
-
