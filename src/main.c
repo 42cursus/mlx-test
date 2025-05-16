@@ -74,8 +74,32 @@ int key_press(KeySym key, void *param)
 		toggle_fullscreen(app);
 		mlx_do_sync(app->mlx);
 	}
-	if (key == XK_Escape)
+	else if (key == XK_Escape)
 		app->mlx->end_loop = 1;
+	else if (key == XK_Left)
+	{
+		app->coord.x = (app->coord.x - app->fish->width + app->canvas->width) % app->canvas->width;
+		fill_with_colour(app->canvas, 0x00ff0000, 0x0000dd00);
+		pix_copy(app->fish, app->canvas, app->coord);
+	}
+	else if (key == XK_Right)
+	{
+		app->coord.x = (app->coord.x + app->fish->width + app->canvas->width) % app->canvas->width;
+		fill_with_colour(app->canvas, 0x00ff0000, 0x0000dd00);
+		pix_copy(app->fish, app->canvas, app->coord);
+	}
+	else if (key == XK_Up)
+	{
+		app->coord.y = (app->coord.y - app->fish->height + app->canvas->height) % app->canvas->height;
+		fill_with_colour(app->canvas, 0x00ff0000, 0x0000dd00);
+		pix_copy(app->fish, app->canvas, app->coord);
+	}
+	else if (key == XK_Down)
+	{
+		app->coord.y = (app->coord.y + app->fish->height + app->canvas->height) % app->canvas->height;
+		fill_with_colour(app->canvas, 0x00ff0000, 0x0000dd00);
+		pix_copy(app->fish, app->canvas, app->coord);
+	}
 	return (0);
 }
 
@@ -130,7 +154,6 @@ void fill_with_colour(t_img *img, int f_col, int c_col)
 	}
 }
 
-
 __attribute__ ((noreturn))
 int main(void)
 {
@@ -144,7 +167,17 @@ int main(void)
 	mlx_hook(app->root, DestroyNotify, 0, (void *)&exit_win, app);
 	mlx_hook(app->root, KeyPress, KeyPressMask, (void *) &key_press, app);
 
+
+	t_img dummy;
+	app->fish = mlx_xpm_file_to_image(app->mlx, (char *) "lib/minilibx-linux/test/open.xpm", &dummy.width, &dummy.height);
+	pix_copy(app->fish, app->canvas, app->coord);
+
 	mlx_loop_hook(app->mlx, &render, app);
+//	fill_with_colour(app->canvas, 0x00ff0000, 0x0000dd00);
+//	mlx_put_image_to_window(app->mlx, app->root, app->canvas, 0, 0);
+//	mlx_put_image_to_window(app->mlx, app->root, img, 100, 100);
+//	sleep(2000);
 	mlx_loop(app->mlx);
+
 	exit_win(app);
 }

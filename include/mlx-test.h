@@ -21,6 +21,12 @@
 # define WIN_HEIGHT 480
 # define WIN_WIDTH 720
 
+typedef struct s_ivec
+{
+	int	x;
+	int	y;
+}	t_ivec;
+
 typedef struct s_info
 {
 	t_xvar		*mlx;
@@ -28,6 +34,8 @@ typedef struct s_info
 	int			fullscreen;
 	char 		*title;
 	t_img		*canvas;
+	t_img		*fish;
+	t_ivec		coord;
 	int			clip_x_origin;
 	int			clip_y_origin;
 	size_t		last_frame;
@@ -42,5 +50,11 @@ size_t	get_time_us(void);
 void	on_expose(t_info *app);
 int		key_press(KeySym key, void *param);
 void	fill_with_colour(t_img *img, int f_col, int c_col);
+
+
+void	memcpy_avx2_nt(void *dst, const void *src, size_t count);
+void	memcpy_sse2(void *dst_void, const void *src_void, size_t size);
+void	pixcpy_sse2(const t_img *src, const t_img *dst);
+void	pix_copy(const t_img *src, const t_img *dst, t_ivec coord);
 
 #endif //MLX_TEST_H
