@@ -64,6 +64,13 @@ int	exit_win(t_info *const	app)
 	_exit(EX_OK);
 }
 
+void redraw_img(t_info *const app)
+{
+	fill_with_colour(app->canvas, MLX_TANG_YELLOW, MLX_DTURQUOISE);
+	pix_copy(app->cur, app->canvas, app->coord);
+	pix_copy(app->fish, app->canvas, app->fish_coord);
+}
+
 int key_press(KeySym key, void *param)
 {
 	t_info *const app = param;
@@ -76,30 +83,43 @@ int key_press(KeySym key, void *param)
 	}
 	else if (key == XK_Escape)
 		app->mlx->end_loop = 1;
-	else if (key == XK_Left)
+	else
 	{
-		app->coord.x = (app->coord.x - app->fish->width + app->canvas->width) % app->canvas->width;
-		fill_with_colour(app->canvas, 0x00ff0000, 0x0000dd00);
-		pix_copy(app->fish, app->canvas, app->coord);
+		if (key == XK_Left)
+			app->coord.x =
+				(app->coord.x - app->cur->width + app->canvas->width) %
+				app->canvas->width;
+		else if (key == XK_Right)
+			app->coord.x =
+				(app->coord.x + app->cur->width + app->canvas->width) %
+				app->canvas->width;
+		else if (key == XK_Up)
+			app->coord.y =
+				(app->coord.y - app->cur->height + app->canvas->height) %
+				app->canvas->height;
+		else if (key == XK_Down)
+			app->coord.y =
+				(app->coord.y + app->cur->height + app->canvas->height) %
+				app->canvas->height;
+		else if (key == XK_a)
+			app->fish_coord.x =
+				(app->fish_coord.x - app->cur->width + app->canvas->width) %
+				app->canvas->width;
+		else if (key == XK_d)
+			app->fish_coord.x =
+				(app->fish_coord.x + app->cur->width + app->canvas->width) %
+				app->canvas->width;
+		else if (key == XK_w)
+			app->fish_coord.y =
+				(app->coord.y - app->cur->height + app->canvas->height) %
+				app->canvas->height;
+		else if (key == XK_s)
+			app->fish_coord.y =
+				(app->fish_coord.y + app->cur->height + app->canvas->height) %
+				app->canvas->height;
+		redraw_img(app);
 	}
-	else if (key == XK_Right)
-	{
-		app->coord.x = (app->coord.x + app->fish->width + app->canvas->width) % app->canvas->width;
-		fill_with_colour(app->canvas, 0x00ff0000, 0x0000dd00);
-		pix_copy(app->fish, app->canvas, app->coord);
-	}
-	else if (key == XK_Up)
-	{
-		app->coord.y = (app->coord.y - app->fish->height + app->canvas->height) % app->canvas->height;
-		fill_with_colour(app->canvas, 0x00ff0000, 0x0000dd00);
-		pix_copy(app->fish, app->canvas, app->coord);
-	}
-	else if (key == XK_Down)
-	{
-		app->coord.y = (app->coord.y + app->fish->height + app->canvas->height) % app->canvas->height;
-		fill_with_colour(app->canvas, 0x00ff0000, 0x0000dd00);
-		pix_copy(app->fish, app->canvas, app->coord);
-	}
+
 	return (0);
 }
 
@@ -163,20 +183,18 @@ int main(void)
 	app->root = mlx_new_window(app->mlx, WIN_WIDTH,
 						WIN_HEIGHT, app->title);
 	app->canvas = mlx_new_image(app->mlx, WIN_WIDTH, WIN_HEIGHT);
-	fill_with_colour(app->canvas, 0x00ff0000, 0x0000dd00);
+
 	mlx_hook(app->root, DestroyNotify, 0, (void *)&exit_win, app);
 	mlx_hook(app->root, KeyPress, KeyPressMask, (void *) &key_press, app);
 
 
 	t_img dummy;
+	app->fish_coord = (t_ivec){.x = 300, .y = 40};
 	app->fish = mlx_xpm_file_to_image(app->mlx, (char *) "lib/minilibx-linux/test/open.xpm", &dummy.width, &dummy.height);
-	pix_copy(app->fish, app->canvas, app->coord);
+	app->cur = mlx_xpm_file_to_image(app->mlx, (char *) "textures/map_pointer.xpm", &dummy.width, &dummy.height);
+	redraw_img(app);
 
 	mlx_loop_hook(app->mlx, &render, app);
-//	fill_with_colour(app->canvas, 0x00ff0000, 0x0000dd00);
-//	mlx_put_image_to_window(app->mlx, app->root, app->canvas, 0, 0);
-//	mlx_put_image_to_window(app->mlx, app->root, img, 100, 100);
-//	sleep(2000);
 	mlx_loop(app->mlx);
 
 	exit_win(app);

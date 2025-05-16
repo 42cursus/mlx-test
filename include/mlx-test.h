@@ -20,6 +20,10 @@
 
 # define WIN_HEIGHT 480
 # define WIN_WIDTH 720
+# define XPM_TRANSPARENT 0xff000000
+# define MLX_TRANSPARENT 0x00000042
+# define MLX_DTURQUOISE 0x0000ddcc
+# define MLX_TANG_YELLOW 0x00ffcc00
 
 typedef struct s_ivec
 {
@@ -34,8 +38,10 @@ typedef struct s_info
 	int			fullscreen;
 	char 		*title;
 	t_img		*canvas;
+	t_img		*cur;
 	t_img		*fish;
 	t_ivec		coord;
+	t_ivec		fish_coord;
 	int			clip_x_origin;
 	int			clip_y_origin;
 	size_t		last_frame;
@@ -56,5 +62,5 @@ void	memcpy_avx2_nt(void *dst, const void *src, size_t count);
 void	memcpy_sse2(void *dst_void, const void *src_void, size_t size);
 void	pixcpy_sse2(const t_img *src, const t_img *dst);
 void	pix_copy(const t_img *src, const t_img *dst, t_ivec coord);
-
+void	redraw_img(t_info *const app);
 #endif //MLX_TEST_H

@@ -17,7 +17,6 @@
 
 void	pix_copy(const t_img *src, const t_img *dst, t_ivec coord)
 {
-	u_int32_t key = 0xFF000000;
 	int i = -1;
 	while(++i < src->height)
 	{
@@ -27,7 +26,7 @@ void	pix_copy(const t_img *src, const t_img *dst, t_ivec coord)
 		while (++j < src->width)
 		{
 			u_int32_t src_pixel = src_row[j];
-			u_int32_t mask = -(src_pixel != key);
+			u_int32_t mask = -(src_pixel != XPM_TRANSPARENT);
 			dst_row[j] = (src_pixel & mask) | (dst_row[j] & ~mask);
 		}
 	}
@@ -39,7 +38,7 @@ void	pixcpy_sse2(const t_img *src, const t_img *dst)
 	uint32_t *src_data = (uint32_t *)src->data;
 	uint32_t *dst_data = (uint32_t *)dst->data;
 
-	__m128i transparent = _mm_set1_epi32(0xFF000000);
+	__m128i transparent = _mm_set1_epi32(XPM_TRANSPARENT);
 
 	int i = 0;
 	while(i < num_pixels)
