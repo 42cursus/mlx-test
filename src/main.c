@@ -116,38 +116,25 @@ int key_press(KeySym key, void *param)
 	}
 	else if (key == XK_Escape)
 		app->mlx->end_loop = 1;
-	else
+	else if (key == XK_Left || key == XK_Right || key == XK_Up || key == XK_Down)
 	{
 		t_ivec		new_coord;
+		new_coord = app->player.coord;
 
-		if (key == XK_Left)
-		{
-			new_coord = app->player.coord;
-			new_coord.x = (new_coord.x - app->player.avatar->width + app->canvas->width) %
-				app->canvas->width;
-			app->player.coord = new_coord;
-			rotate90(app->mlx, app->fish.avatar, TRANSFORM_ROTATE_CCW_90);
-		}
-		else if (key == XK_Right)
-		{
-			app->player.coord.x =
-				(app->player.coord.x + app->player.avatar->width + app->canvas->width) %
-				app->canvas->width;
-			rotate90(app->mlx, app->fish.avatar, TRANSFORM_ROTATE_CW_90);
-		}
-		else if (key == XK_Up)
-			app->player.coord.y =
-				(app->player.coord.y - app->player.avatar->height + app->canvas->height) %
-				app->canvas->height;
-		else if (key == XK_Down)
-			app->player.coord.y =
-				(app->player.coord.y + app->player.avatar->height + app->canvas->height) %
-				app->canvas->height;
-		else if (key == XK_a || key == XK_s || key == XK_d || key == XK_w)
-			transform(app, &app->fish, key);
+		if (key == XK_Left) new_coord.x -= app->player.avatar->width;
+		else if (key == XK_Right) new_coord.x += app->player.avatar->width;
+		else if (key == XK_Up) new_coord.y -= app->player.avatar->height;
+		else new_coord.y += app->player.avatar->height;
+		new_coord.x = (new_coord.x + app->canvas->width) % app->canvas->width;
+		new_coord.y = (new_coord.y + app->canvas->height) % app->canvas->height;
+		app->player.coord = new_coord;
 		redraw_img(app);
 	}
-
+	else if (key == XK_a || key == XK_s || key == XK_d || key == XK_w)
+	{
+		transform(app, &app->fish, key);
+		redraw_img(app);
+	}
 	return (0);
 }
 
