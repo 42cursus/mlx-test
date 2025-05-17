@@ -73,9 +73,9 @@ void redraw_img(t_info *const app)
 }
 
 void apply_transform(t_info *const app, t_img *img, t_ivec new_dir,
-					 t_transform_type type)
+					 t_tr_type type)
 {
-	if (type == TRANSFORM_FLIP_H || type == TRANSFORM_FLIP_V)
+	if (type == TR_FLIP_H || type == TR_FLIP_V)
 		flip(app->mlx, img, type);
 	else
 		rotate90(app->mlx, img, type);

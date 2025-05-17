@@ -19,7 +19,7 @@
  * @param src
  * @param angle
  */
-void	rotate90_blit(t_img *dst, t_img *src, t_transform_type type)
+void	rotate90_blit(t_img *dst, t_img *src, t_tr_type type)
 {
 	u_int32_t *src_data = (u_int32_t *)src->data;
 	u_int32_t *dst_data = (u_int32_t *)dst->data;
@@ -38,12 +38,12 @@ void	rotate90_blit(t_img *dst, t_img *src, t_transform_type type)
 			int dx = x;
 			int dy = y;
 
-			if (type == TRANSFORM_ROTATE_CCW_90) // (x, y) → (h - 1 - y, x)
+			if (type == TR_ROTATE_CCW_90) // (x, y) → (h - 1 - y, x)
 			{
 				dx = sh - 1 - y;
 				dy = x;
 			}
-			else if (type == TRANSFORM_ROTATE_CW_90) // (x, y) → (y, w - 1 - x)
+			else if (type == TR_ROTATE_CW_90) // (x, y) → (y, w - 1 - x)
 			{
 				dx = y;
 				dy = sw - 1 - x;
@@ -55,36 +55,33 @@ void	rotate90_blit(t_img *dst, t_img *src, t_transform_type type)
 	}
 }
 
-void flip_blit(t_img *dst, t_img *src, t_transform_type transform)
+void flip_blit(t_img *dst, t_img *src, t_tr_type transform)
 {
 	u_int32_t *src_data = (u_int32_t *)src->data;
 	u_int32_t *dst_data = (u_int32_t *)dst->data;
-	int w = src->width;
-	int h = src->height;
+	const t_ivec	dim = (t_ivec){.x = src->width, .y = src->height};
 
 	int y = -1;
-	while (++y < h)
+	while (++y < dim.y)
 	{
 		int x = -1;
-		while(++x < w)
+		while(++x < dim.x)
 		{
-			u_int32_t pixel = src_data[y * w + x];
+			u_int32_t pixel = src_data[y * dim.x + x];
 			u_int32_t mask = -(pixel != XPM_TRANSPARENT);
-
 			int dx = x;
 			int dy = y;
-
-			if (transform == TRANSFORM_FLIP_H)
-				dx = w - 1 - x;
-			else if (transform == TRANSFORM_FLIP_V)
-				dy = h - 1 - y;
-			int dst_index = dy * w + dx;
+			if (transform == TR_FLIP_H)
+				dx = dim.x - 1 - x;
+			else if (transform == TR_FLIP_V)
+				dy = dim.y - 1 - y;
+			int dst_index = dy * dim.x + dx;
 			dst_data[dst_index] = (pixel & mask) | (dst_data[dst_index] & ~mask);
 		}
 	}
 }
 
-void	rotate90(t_xvar *mlx, t_img *src, t_transform_type type)
+void	rotate90(t_xvar *mlx, t_img *src, t_tr_type type)
 {
 	t_img *const tmp =  mlx_new_image(mlx, src->width, src->height);
 
@@ -94,7 +91,7 @@ void	rotate90(t_xvar *mlx, t_img *src, t_transform_type type)
 	mlx_destroy_image(mlx, tmp);
 }
 
-void flip(t_xvar *mlx, t_img *src, t_transform_type type)
+void flip(t_xvar *mlx, t_img *src, t_tr_type type)
 {
 	t_img *const tmp =  mlx_new_image(mlx, src->width, src->height);
 
@@ -104,23 +101,19 @@ void flip(t_xvar *mlx, t_img *src, t_transform_type type)
 	mlx_destroy_image(mlx, tmp);
 }
 
-t_transform_type get_texture_transform(t_ivec base_dir, t_ivec new_dir)
+t_tr_type get_texture_transform(t_ivec base_dir, t_ivec new_dir)
 {
-	// No change
-	if (new_dir.x == base_dir.x && new_dir.y == base_dir.y)
-		return TRANSFORM_NONE;
+	t_tr_type type;
 
-	// 180° rotation (flip)
-	if (new_dir.x == -base_dir.x && new_dir.y == -base_dir.y)
-		return ((t_transform_type[]){TRANSFORM_FLIP_V, TRANSFORM_FLIP_H}[base_dir.x != 0]);
+	type = TR_INVALID;
 
-	// 90° CCW: (x, y) becomes (-y, x)
-	if (new_dir.x == -base_dir.y && new_dir.y == base_dir.x)
-		return TRANSFORM_ROTATE_CCW_90;
-
-	// 90° CW: (x, y) becomes (y, -x)
-	if (new_dir.x == base_dir.y && new_dir.y == -base_dir.x)
-		return TRANSFORM_ROTATE_CW_90;
-
-	return TRANSFORM_INVALID;
+	if (new_dir.x == base_dir.x && new_dir.y == base_dir.y) 	// No change
+		type = TR_NONE;
+	else if (new_dir.x == -base_dir.x && new_dir.y == -base_dir.y)	// 180° rotation (flip)
+		type = ((t_tr_type[]){TR_FLIP_V, TR_FLIP_H}[base_dir.x != 0]);
+	else if (new_dir.x == -base_dir.y && new_dir.y == base_dir.x) 	// 90° CCW: (x, y) becomes (-y, x)
+		type = TR_ROTATE_CCW_90;
+	else if (new_dir.x == base_dir.y && new_dir.y == -base_dir.x)	// 90° CW: (x, y) becomes (y, -x)
+		type = TR_ROTATE_CW_90;
+	return (type);
 }

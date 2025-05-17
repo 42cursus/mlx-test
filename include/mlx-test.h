@@ -33,13 +33,13 @@ typedef struct s_ivec
 
 typedef enum e_transform_type
 {
-	TRANSFORM_NONE,
-	TRANSFORM_ROTATE_CW_90,
-	TRANSFORM_ROTATE_CCW_90,
-	TRANSFORM_FLIP_H,  // Flip horizontally (mirror over Y)
-	TRANSFORM_FLIP_V,  // Flip vertically (mirror over X)
-	TRANSFORM_INVALID
-}	t_transform_type;
+	TR_NONE,
+	TR_ROTATE_CW_90,
+	TR_ROTATE_CCW_90,
+	TR_FLIP_H,  // Flip horizontally (mirror over Y)
+	TR_FLIP_V,  // Flip vertically (mirror over X)
+	TR_INVALID
+}	t_tr_type;
 
 typedef enum e_dir
 {
@@ -83,7 +83,7 @@ void	on_expose(t_info *app);
 int		key_press(KeySym key, void *param);
 void	fill_with_colour(t_img *img, int f_col, int c_col);
 
-t_transform_type get_texture_transform(t_ivec base_dir, t_ivec new_dir);
+t_tr_type get_texture_transform(t_ivec base_dir, t_ivec new_dir);
 
 t_ivec	ivec(int x, int y);
 t_ivec	norm_ivec(t_ivec v);
@@ -98,11 +98,11 @@ void	pix_copy(const t_img *src, const t_img *dst, t_ivec coord);
 void	pix_copy_safe(const t_img *src, const t_img *dst, t_ivec coord);
 void	copy_row(const u_int32_t *src_row, u_int32_t *dst_row, int width);
 void	redraw_img(t_info *const app);
-void	rotate90(t_xvar *mlx, t_img *src, t_transform_type transform);
-void	flip(t_xvar *mlx, t_img *src, t_transform_type type);
-void	rotate90_blit(t_img *dst, t_img *src, t_transform_type transform);
-void	flip_blit(t_img *dst, t_img *src, t_transform_type transform);
+void	rotate90(t_xvar *mlx, t_img *src, t_tr_type transform);
+void	flip(t_xvar *mlx, t_img *src, t_tr_type type);
+void	rotate90_blit(t_img *dst, t_img *src, t_tr_type transform);
+void	flip_blit(t_img *dst, t_img *src, t_tr_type transform);
 void	transform(t_info *const app, t_entity *entity, KeySym key);
 void apply_transform(t_info *const app, t_img *img, t_ivec new_dir,
-					 t_transform_type type);
+					 t_tr_type type);
 #endif //MLX_TEST_H
