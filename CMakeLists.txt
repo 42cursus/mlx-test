@@ -11,8 +11,8 @@
 # **************************************************************************** #
 
 cmake_minimum_required(VERSION 3.8)
-set(CMAKE_C_COMPILER clang)
-#set(CMAKE_C_COMPILER gcc)
+#set(CMAKE_C_COMPILER clang)
+set(CMAKE_C_COMPILER gcc)
 
 project(mlx-test C)
 set(CMAKE_VERBOSE_MAKEFILE ON)
@@ -23,8 +23,7 @@ set(FT_CFLAGS
         -Wall -Wextra -Werror
         -Wwrite-strings
         -Wimplicit
-        -mavx
-        -mavx2
+        -msse -msse2 -msse3 -mssse3 -msse4.1 -msse4.2 -mavx -mavx2
         -Wformat -Werror=format-security
         -Wstrict-prototypes
         -Wmissing-prototypes
@@ -32,20 +31,21 @@ set(FT_CFLAGS
         -Wno-error=unused-parameter
         -Wno-error=unused-variable
         -O0
-        -pg
         -masm=att
-        -g3 -gdwarf-3
+        -g3 -gdwarf-3 -pg
         -fasynchronous-unwind-tables
         -fno-omit-frame-pointer
-#        -fsanitize=address
-#        -fsanitize=undefined
-#        -fno-sanitize-recover=all
-#        -fsanitize=float-divide-by-zero
-#        -fsanitize=float-cast-overflow
+#        -fno-reorder-functions
+#        -fno-inline
+        -fsanitize=address
+        -fsanitize=undefined
+        -fno-sanitize-recover=all
+        -fsanitize=float-divide-by-zero
+        -fsanitize=float-cast-overflow
 )
 
 set(COMMON_LDFLAGS
-        -pg
+        -g3 -gdwarf-3 -pg
         -fsanitize=address
         -fsanitize=undefined
         -fno-sanitize-recover=all

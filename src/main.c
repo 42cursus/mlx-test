@@ -57,18 +57,19 @@ static void toggle_fullscreen(t_info *const app)
 								WIN_WIDTH, WIN_HEIGHT);
 }
 
-__attribute__ ((noreturn))
+//__attribute__ ((noreturn))
 int	exit_win(t_info *const	app)
 {
-	cleanup(app);
-	_exit(EX_OK);
+	app->mlx->end_loop = 1;
+//	_exit(EX_OK);
+	return (0);
 }
 
 void redraw_img(t_info *const app)
 {
 	fill_with_colour(app->canvas, MLX_TANG_YELLOW, MLX_DTURQUOISE);
 	pix_copy(app->cur, app->canvas, app->coord);
-	pix_copy(app->fish, app->canvas, app->fish_coord);
+	pix_copy_safe(app->fish, app->canvas, app->fish_coord);
 }
 
 int key_press(KeySym key, void *param)
@@ -85,14 +86,23 @@ int key_press(KeySym key, void *param)
 		app->mlx->end_loop = 1;
 	else
 	{
+		t_ivec		new_coord;
+
 		if (key == XK_Left)
-			app->coord.x =
-				(app->coord.x - app->cur->width + app->canvas->width) %
+		{
+			new_coord = app->coord;
+			new_coord.x = (new_coord.x - app->cur->width + app->canvas->width) %
 				app->canvas->width;
+			app->coord = new_coord;
+			rotate90(app->mlx, app->fish, CCW);
+		}
 		else if (key == XK_Right)
+		{
 			app->coord.x =
 				(app->coord.x + app->cur->width + app->canvas->width) %
 				app->canvas->width;
+			rotate90(app->mlx, app->fish, CW);
+		}
 		else if (key == XK_Up)
 			app->coord.y =
 				(app->coord.y - app->cur->height + app->canvas->height) %
@@ -103,19 +113,21 @@ int key_press(KeySym key, void *param)
 				app->canvas->height;
 		else if (key == XK_a)
 			app->fish_coord.x =
-				(app->fish_coord.x - app->cur->width + app->canvas->width) %
+				(app->fish_coord.x - app->fish->width + app->canvas->width) %
 				app->canvas->width;
 		else if (key == XK_d)
 			app->fish_coord.x =
-				(app->fish_coord.x + app->cur->width + app->canvas->width) %
+				(app->fish_coord.x + app->fish->width + app->canvas->width) %
 				app->canvas->width;
 		else if (key == XK_w)
+		{
 			app->fish_coord.y =
-				(app->coord.y - app->cur->height + app->canvas->height) %
+				(app->fish_coord.y - app->fish->height + app->canvas->height) %
 				app->canvas->height;
+		}
 		else if (key == XK_s)
 			app->fish_coord.y =
-				(app->fish_coord.y + app->cur->height + app->canvas->height) %
+				(app->fish_coord.y + app->fish->height + app->canvas->height) %
 				app->canvas->height;
 		redraw_img(app);
 	}
@@ -146,7 +158,7 @@ int	render(void *param)
 	time = get_time_us();
 	app->last_frame = time;
 	while (get_time_us() - app->last_frame < app->fr_delay)
-		usleep(100);
+		usleep(500);
 	on_expose(app);
 	return (0);
 }
@@ -174,28 +186,29 @@ void fill_with_colour(t_img *img, int f_col, int c_col)
 	}
 }
 
-__attribute__ ((noreturn))
 int main(void)
 {
 	t_info	*const	app = &(t_info){.title = (char *)"mlx-test"};
+	t_img	dummy;
 
 	app->mlx = mlx_init();
-	app->root = mlx_new_window(app->mlx, WIN_WIDTH,
-						WIN_HEIGHT, app->title);
 	app->canvas = mlx_new_image(app->mlx, WIN_WIDTH, WIN_HEIGHT);
+	app->framerate = 100;
+	app->fr_delay = 1000000 / app->framerate;
+	app->fish = mlx_xpm_file_to_image(app->mlx, (char *)"lib/minilibx-linux/test/open.xpm", &dummy.width, &dummy.height);
+	app->cur = mlx_xpm_file_to_image(app->mlx, (char *)"textures/map_pointer.xpm", &dummy.width, &dummy.height);
+	app->fish_coord = (t_ivec){.x = app->canvas->width - 12, .y = app->canvas->height - 5};
+	redraw_img(app);
+
+	app->root = mlx_new_window(app->mlx, WIN_WIDTH,
+							   WIN_HEIGHT, app->title);
 
 	mlx_hook(app->root, DestroyNotify, 0, (void *)&exit_win, app);
 	mlx_hook(app->root, KeyPress, KeyPressMask, (void *) &key_press, app);
-
-
-	t_img dummy;
-	app->fish_coord = (t_ivec){.x = 300, .y = 40};
-	app->fish = mlx_xpm_file_to_image(app->mlx, (char *) "lib/minilibx-linux/test/open.xpm", &dummy.width, &dummy.height);
-	app->cur = mlx_xpm_file_to_image(app->mlx, (char *) "textures/map_pointer.xpm", &dummy.width, &dummy.height);
-	redraw_img(app);
-
 	mlx_loop_hook(app->mlx, &render, app);
+
 	mlx_loop(app->mlx);
 
-	exit_win(app);
+	cleanup(app);
+	return (0);
 }
