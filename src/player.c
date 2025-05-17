@@ -38,12 +38,12 @@ void	rotate90_blit(t_img *dst, t_img *src, t_transform_type type)
 			int dx = x;
 			int dy = y;
 
-			if (type == TRANSFORM_ROTATE_CW_90) // (x, y) → (h - 1 - y, x)
+			if (type == TRANSFORM_ROTATE_CCW_90) // (x, y) → (h - 1 - y, x)
 			{
 				dx = sh - 1 - y;
 				dy = x;
 			}
-			else if (type == TRANSFORM_ROTATE_CCW_90) // (x, y) → (y, w - 1 - x)
+			else if (type == TRANSFORM_ROTATE_CW_90) // (x, y) → (y, w - 1 - x)
 			{
 				dx = y;
 				dy = sw - 1 - x;

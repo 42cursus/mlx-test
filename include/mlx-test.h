@@ -85,6 +85,7 @@ void	fill_with_colour(t_img *img, int f_col, int c_col);
 
 t_transform_type get_texture_transform(t_ivec base_dir, t_ivec new_dir);
 
+t_ivec	ivec(int x, int y);
 t_ivec	norm_ivec(t_ivec v);
 t_ivec	add_ivec(t_ivec v1, t_ivec v2);
 t_ivec	sub_ivec(t_ivec v1, t_ivec v2);
@@ -101,5 +102,7 @@ void	rotate90(t_xvar *mlx, t_img *src, t_transform_type transform);
 void	flip(t_xvar *mlx, t_img *src, t_transform_type type);
 void	rotate90_blit(t_img *dst, t_img *src, t_transform_type transform);
 void	flip_blit(t_img *dst, t_img *src, t_transform_type transform);
-void	apply_transform(t_info *const app, t_img *img, t_transform_type type);
+void	transform(t_info *const app, t_entity *entity, KeySym key);
+void apply_transform(t_info *const app, t_img *img, t_ivec new_dir,
+					 t_transform_type type);
 #endif //MLX_TEST_H

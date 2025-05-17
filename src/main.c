@@ -72,12 +72,38 @@ void redraw_img(t_info *const app)
 	pix_copy_safe(app->fish.avatar, app->canvas, app->fish.coord);
 }
 
-void apply_transform(t_info *const app, t_img *img, t_transform_type type)
+void apply_transform(t_info *const app, t_img *img, t_ivec new_dir,
+					 t_transform_type type)
 {
 	if (type == TRANSFORM_FLIP_H || type == TRANSFORM_FLIP_V)
 		flip(app->mlx, img, type);
 	else
 		rotate90(app->mlx, img, type);
+	app->fish.dir = new_dir;
+}
+
+void transform(t_info *const app, t_entity *entity, KeySym key)
+{
+	int				new_x;
+	int				new_y;
+	t_ivec			new_dir;
+	t_img *const	avatar = entity->avatar;
+	t_img *const	canvas = app->canvas;
+
+	new_x = entity->coord.x;
+	new_y = entity->coord.y;
+	if (key == XK_a)
+		new_x = (new_x - avatar->width + canvas->width) % canvas->width;
+	else if (key == XK_d)
+		new_x = (new_x + avatar->width + canvas->width) % canvas->width;
+	else if (key == XK_w)
+		new_y = (new_y - avatar->height + canvas->height) % canvas->height;
+	else if (key == XK_s)
+		new_y = (new_y + avatar->height + canvas->height) % canvas->height;
+	new_dir = norm_ivec(sub_ivec(ivec(new_x, new_y), entity->coord));
+	apply_transform(app, avatar, new_dir,
+					get_texture_transform(entity->dir, new_dir));
+	entity->coord = ivec(new_x, new_y);
 }
 
 int key_press(KeySym key, void *param)
@@ -95,7 +121,6 @@ int key_press(KeySym key, void *param)
 	else
 	{
 		t_ivec		new_coord;
-		t_ivec		delta;
 
 		if (key == XK_Left)
 		{
@@ -120,38 +145,8 @@ int key_press(KeySym key, void *param)
 			app->player.coord.y =
 				(app->player.coord.y + app->player.avatar->height + app->canvas->height) %
 				app->canvas->height;
-		else if (key == XK_a)
-		{
-			new_coord = app->fish.coord;
-			new_coord.x = (new_coord.x - app->fish.avatar->width + app->canvas->width) % app->canvas->width;
-			delta = norm_ivec(sub_ivec(new_coord, app->fish.coord));
-			apply_transform(app, app->fish.avatar, get_texture_transform(app->fish.dir, delta));
-			app->fish.coord = new_coord;
-		}
-		else if (key == XK_d)
-		{
-			new_coord = app->fish.coord;
-			new_coord.x = (new_coord.x + app->fish.avatar->width + app->canvas->width) % app->canvas->width;
-			delta = norm_ivec(sub_ivec(new_coord, app->fish.coord));
-			apply_transform(app, app->fish.avatar, get_texture_transform(app->fish.dir, delta));
-			app->fish.coord = new_coord;
-		}
-		else if (key == XK_w)
-		{
-			new_coord = app->fish.coord;
-			new_coord.y = (new_coord.y - app->fish.avatar->height + app->canvas->height) % app->canvas->height;
-			delta = norm_ivec(sub_ivec(new_coord, app->fish.coord));
-			apply_transform(app, app->fish.avatar, get_texture_transform(app->fish.dir, delta));
-			app->fish.coord = new_coord;
-		}
-		else if (key == XK_s)
-		{
-			new_coord = app->fish.coord;
-			new_coord.y = (new_coord.y + app->fish.avatar->height + app->canvas->height) % app->canvas->height;
-			delta = norm_ivec(sub_ivec(new_coord, app->fish.coord));
-			apply_transform(app, app->fish.avatar, get_texture_transform(app->fish.dir, delta));
-			app->fish.coord = new_coord;
-		}
+		else if (key == XK_a || key == XK_s || key == XK_d || key == XK_w)
+			transform(app, &app->fish, key);
 		redraw_img(app);
 	}
 

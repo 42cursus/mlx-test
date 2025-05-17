@@ -12,13 +12,17 @@
 
 #include "mlx-test.h"
 
+t_ivec	ivec(int x, int y)
+{
+	return (t_ivec){.x = x, .y = y};
+}
 
 t_ivec	norm_ivec(t_ivec v)
 {
 	if (v.x)
-		v.x /= v.x;
+		v.x /= abs(v.x);
 	if (v.y)
-		v.y /= v.y;
+		v.y /= abs(v.y);
 	return v;
 }
 
