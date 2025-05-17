@@ -92,17 +92,15 @@ void transform(t_info *const app, t_entity *entity, KeySym key)
 
 	new_x = entity->coord.x;
 	new_y = entity->coord.y;
-	if (key == XK_a)
-		new_x = (new_x - avatar->width + canvas->width) % canvas->width;
-	else if (key == XK_d)
-		new_x = (new_x + avatar->width + canvas->width) % canvas->width;
-	else if (key == XK_w)
-		new_y = (new_y - avatar->height + canvas->height) % canvas->height;
-	else if (key == XK_s)
-		new_y = (new_y + avatar->height + canvas->height) % canvas->height;
+	if (key == XK_a) new_x -= avatar->width;
+	else if (key == XK_d) new_x += avatar->width;
+	else if (key == XK_w) new_y -= avatar->height;
+	else if (key == XK_s) new_y += avatar->height;
 	new_dir = norm_ivec(sub_ivec(ivec(new_x, new_y), entity->coord));
 	apply_transform(app, avatar, new_dir,
 					get_texture_transform(entity->dir, new_dir));
+	new_x = (new_x + canvas->width) % canvas->width;
+	new_y = (new_y + canvas->height) % canvas->height;
 	entity->coord = ivec(new_x, new_y);
 }
 
