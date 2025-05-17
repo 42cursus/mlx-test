@@ -31,13 +31,32 @@ typedef struct s_ivec
 	int	y;
 }	t_ivec;
 
-typedef struct s_player
+typedef enum e_transform_type
+{
+	TRANSFORM_NONE,
+	TRANSFORM_ROTATE_CW_90,
+	TRANSFORM_ROTATE_CCW_90,
+	TRANSFORM_FLIP_H,  // Flip horizontally (mirror over Y)
+	TRANSFORM_FLIP_V,  // Flip vertically (mirror over X)
+	TRANSFORM_INVALID
+}	t_transform_type;
+
+typedef enum e_dir
+{
+	UP = 0,
+	DOWN,
+	LEFT,
+	RIGHT,
+	NO_DIRS
+}	t_dir;
+
+typedef struct s_entity
 {
 	t_ivec	coord;
 	t_ivec	dir;
 	double	angle;
 	t_img	*avatar;
-}	t_player;
+}	t_entity;
 
 typedef struct s_info
 {
@@ -46,9 +65,8 @@ typedef struct s_info
 	int			fullscreen;
 	char 		*title;
 	t_img		*canvas;
-	t_player	player;
-	t_img		*fish;
-	t_ivec		fish_coord;
+	t_entity	player;
+	t_entity	fish;
 	int			clip_x_origin;
 	int			clip_y_origin;
 	size_t		last_frame;
@@ -65,26 +83,11 @@ void	on_expose(t_info *app);
 int		key_press(KeySym key, void *param);
 void	fill_with_colour(t_img *img, int f_col, int c_col);
 
-typedef enum e_rot
-{
-	CW = 0,
-	CCW
-}	t_rot;
+t_transform_type get_texture_transform(t_ivec base_dir, t_ivec new_dir);
 
-typedef enum e_flip
-{
-	VERT = 0,
-	HORIZ
-}	t_flip;
-
-typedef enum e_dir
-{
-	UP = 0,
-	DOWN,
-	LEFT,
-	RIGHT,
-	NO_DIRS
-}	t_dir;
+t_ivec	norm_ivec(t_ivec v);
+t_ivec	add_ivec(t_ivec v1, t_ivec v2);
+t_ivec	sub_ivec(t_ivec v1, t_ivec v2);
 
 void	memcpy_avx2_nt(void *dst, const void *src, size_t count);
 void	memcpy_sse2(void *dst_void, const void *src_void, size_t size);
@@ -94,9 +97,9 @@ void	pix_copy(const t_img *src, const t_img *dst, t_ivec coord);
 void	pix_copy_safe(const t_img *src, const t_img *dst, t_ivec coord);
 void	copy_row(const u_int32_t *src_row, u_int32_t *dst_row, int width);
 void	redraw_img(t_info *const app);
-void	rotate90(t_xvar *mlx, t_img *src, t_rot angle);
-void	flip(t_xvar *mlx, t_img *src, t_flip flip);
-void	rotate90_blit(t_img *dst, t_img *src, t_rot angle);
-void	flip_blit(t_img *dst, t_img *src, t_flip flip);
-
+void	rotate90(t_xvar *mlx, t_img *src, t_transform_type transform);
+void	flip(t_xvar *mlx, t_img *src, t_transform_type type);
+void	rotate90_blit(t_img *dst, t_img *src, t_transform_type transform);
+void	flip_blit(t_img *dst, t_img *src, t_transform_type transform);
+void	apply_transform(t_info *const app, t_img *img, t_transform_type type);
 #endif //MLX_TEST_H

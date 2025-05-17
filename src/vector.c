@@ -1,24 +1,33 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   cleanup.c                                          :+:      :+:    :+:   */
+/*   vector.c                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: abelov <abelov@student.42london.com>       +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/05/15 20:31:39 by abelov            #+#    #+#             */
-/*   Updated: 2025/05/15 20:31:39 by abelov           ###   ########.fr       */
+/*   Created: 2025/05/17 03:07:38 by abelov            #+#    #+#             */
+/*   Updated: 2025/05/17 03:07:39 by abelov           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "mlx-test.h"
 
-int	cleanup(t_info *app)
+
+t_ivec	norm_ivec(t_ivec v)
 {
-	mlx_destroy_image(app->mlx, app->fish.avatar);
-	mlx_destroy_image(app->mlx, app->player.avatar);
-	mlx_destroy_image(app->mlx, app->canvas);
-	mlx_destroy_window(app->mlx, app->root);
-	mlx_destroy_display(app->mlx);
-	free(app->mlx);
-	return (0);
+	if (v.x)
+		v.x /= v.x;
+	if (v.y)
+		v.y /= v.y;
+	return v;
+}
+
+t_ivec	sub_ivec(t_ivec v1, t_ivec v2)
+{
+	return (t_ivec){.x = v1.x - v2.x, .y = v1.y - v2.y};
+}
+
+t_ivec	add_ivec(t_ivec v1, t_ivec v2)
+{
+	return (t_ivec){.x = v1.x + v2.x, .y = v1.y + v2.y};
 }

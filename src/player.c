@@ -19,7 +19,7 @@
  * @param src
  * @param angle
  */
-void	rotate90_blit(t_img *dst, t_img *src, t_rot angle)
+void	rotate90_blit(t_img *dst, t_img *src, t_transform_type type)
 {
 	u_int32_t *src_data = (u_int32_t *)src->data;
 	u_int32_t *dst_data = (u_int32_t *)dst->data;
@@ -38,12 +38,12 @@ void	rotate90_blit(t_img *dst, t_img *src, t_rot angle)
 			int dx = x;
 			int dy = y;
 
-			if (angle == CW) // (x, y) → (h - 1 - y, x)
+			if (type == TRANSFORM_ROTATE_CW_90) // (x, y) → (h - 1 - y, x)
 			{
 				dx = sh - 1 - y;
 				dy = x;
 			}
-			else if (angle == CCW) // (x, y) → (y, w - 1 - x)
+			else if (type == TRANSFORM_ROTATE_CCW_90) // (x, y) → (y, w - 1 - x)
 			{
 				dx = y;
 				dy = sw - 1 - x;
@@ -55,7 +55,7 @@ void	rotate90_blit(t_img *dst, t_img *src, t_rot angle)
 	}
 }
 
-void flip_blit(t_img *dst, t_img *src, t_flip flip)
+void flip_blit(t_img *dst, t_img *src, t_transform_type transform)
 {
 	u_int32_t *src_data = (u_int32_t *)src->data;
 	u_int32_t *dst_data = (u_int32_t *)dst->data;
@@ -74,9 +74,9 @@ void flip_blit(t_img *dst, t_img *src, t_flip flip)
 			int dx = x;
 			int dy = y;
 
-			if (flip == HORIZ)
+			if (transform == TRANSFORM_FLIP_H)
 				dx = w - 1 - x;
-			else if (flip == VERT)
+			else if (transform == TRANSFORM_FLIP_V)
 				dy = h - 1 - y;
 			int dst_index = dy * w + dx;
 			dst_data[dst_index] = (pixel & mask) | (dst_data[dst_index] & ~mask);
@@ -84,22 +84,43 @@ void flip_blit(t_img *dst, t_img *src, t_flip flip)
 	}
 }
 
-void	rotate90(t_xvar *mlx, t_img *src, t_rot angle)
+void	rotate90(t_xvar *mlx, t_img *src, t_transform_type type)
 {
 	t_img *const tmp =  mlx_new_image(mlx, src->width, src->height);
 
 	fill_with_colour(tmp, XPM_TRANSPARENT, XPM_TRANSPARENT);
-	rotate90_blit(tmp, src, angle);
+	rotate90_blit(tmp, src, type);
 	pix_dup(tmp, src);
 	mlx_destroy_image(mlx, tmp);
 }
 
-void flip(t_xvar *mlx, t_img *src, t_flip flip)
+void flip(t_xvar *mlx, t_img *src, t_transform_type type)
 {
 	t_img *const tmp =  mlx_new_image(mlx, src->width, src->height);
 
 	fill_with_colour(tmp, XPM_TRANSPARENT, XPM_TRANSPARENT);
-	flip_blit(tmp, src, flip);
+	flip_blit(tmp, src, type);
 	pix_dup(tmp, src);
 	mlx_destroy_image(mlx, tmp);
+}
+
+t_transform_type get_texture_transform(t_ivec base_dir, t_ivec new_dir)
+{
+	// No change
+	if (new_dir.x == base_dir.x && new_dir.y == base_dir.y)
+		return TRANSFORM_NONE;
+
+	// 180° rotation (flip)
+	if (new_dir.x == -base_dir.x && new_dir.y == -base_dir.y)
+		return ((t_transform_type[]){TRANSFORM_FLIP_V, TRANSFORM_FLIP_H}[base_dir.x != 0]);
+
+	// 90° CCW: (x, y) becomes (-y, x)
+	if (new_dir.x == -base_dir.y && new_dir.y == base_dir.x)
+		return TRANSFORM_ROTATE_CCW_90;
+
+	// 90° CW: (x, y) becomes (y, -x)
+	if (new_dir.x == base_dir.y && new_dir.y == -base_dir.x)
+		return TRANSFORM_ROTATE_CW_90;
+
+	return TRANSFORM_INVALID;
 }
