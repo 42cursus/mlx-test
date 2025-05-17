@@ -46,9 +46,7 @@ typedef struct s_info
 	int			fullscreen;
 	char 		*title;
 	t_img		*canvas;
-	t_img		*cur;
 	t_player	player;
-	t_ivec		coord;
 	t_img		*fish;
 	t_ivec		fish_coord;
 	int			clip_x_origin;

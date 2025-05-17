@@ -68,7 +68,7 @@ int	exit_win(t_info *const	app)
 void redraw_img(t_info *const app)
 {
 	fill_with_colour(app->canvas, MLX_TANG_YELLOW, MLX_DTURQUOISE);
-	pix_copy(app->cur, app->canvas, app->coord);
+	pix_copy(app->player.avatar, app->canvas, app->player.coord);
 	pix_copy_safe(app->fish, app->canvas, app->fish_coord);
 }
 
@@ -90,26 +90,26 @@ int key_press(KeySym key, void *param)
 
 		if (key == XK_Left)
 		{
-			new_coord = app->coord;
-			new_coord.x = (new_coord.x - app->cur->width + app->canvas->width) %
+			new_coord = app->player.coord;
+			new_coord.x = (new_coord.x - app->player.avatar->width + app->canvas->width) %
 				app->canvas->width;
-			app->coord = new_coord;
+			app->player.coord = new_coord;
 			rotate90(app->mlx, app->fish, CCW);
 		}
 		else if (key == XK_Right)
 		{
-			app->coord.x =
-				(app->coord.x + app->cur->width + app->canvas->width) %
+			app->player.coord.x =
+				(app->player.coord.x + app->player.avatar->width + app->canvas->width) %
 				app->canvas->width;
 			rotate90(app->mlx, app->fish, CW);
 		}
 		else if (key == XK_Up)
-			app->coord.y =
-				(app->coord.y - app->cur->height + app->canvas->height) %
+			app->player.coord.y =
+				(app->player.coord.y - app->player.avatar->height + app->canvas->height) %
 				app->canvas->height;
 		else if (key == XK_Down)
-			app->coord.y =
-				(app->coord.y + app->cur->height + app->canvas->height) %
+			app->player.coord.y =
+				(app->player.coord.y + app->player.avatar->height + app->canvas->height) %
 				app->canvas->height;
 		else if (key == XK_a)
 			app->fish_coord.x =
@@ -196,8 +196,9 @@ int main(void)
 	app->framerate = 100;
 	app->fr_delay = 1000000 / app->framerate;
 	app->fish = mlx_xpm_file_to_image(app->mlx, (char *)"lib/minilibx-linux/test/open.xpm", &dummy.width, &dummy.height);
-	app->cur = mlx_xpm_file_to_image(app->mlx, (char *)"textures/map_pointer.xpm", &dummy.width, &dummy.height);
-	app->fish_coord = (t_ivec){.x = app->canvas->width - 12, .y = app->canvas->height - 5};
+	app->player.avatar = mlx_xpm_file_to_image(app->mlx, (char *)"textures/map_pointer.xpm", &dummy.width, &dummy.height);
+	app->fish_coord = (t_ivec){.x = (WIN_WIDTH / 2) - (app->fish->width / 2), .y = 0};
+	app->player.coord = (t_ivec){.x = (WIN_WIDTH / 2) - (app->player.avatar->width / 2), .y = (WIN_HEIGHT / 2) - (app->player.avatar->height / 2)};
 	redraw_img(app);
 
 	app->root = mlx_new_window(app->mlx, WIN_WIDTH,

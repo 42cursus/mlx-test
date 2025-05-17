@@ -13,6 +13,7 @@
 #include <immintrin.h>
 #include <stdint.h>
 #include <emmintrin.h>  // SSE2
+#include <sys/param.h>
 #include "mlx-test.h"
 
 void	pix_dup(const t_img *src, const t_img *dst)
@@ -50,67 +51,26 @@ void	copy_row(const u_int32_t *src_row, u_int32_t *dst_row, int width)
 
 void	pix_copy_safe(const t_img *src, const t_img *dst, t_ivec coord)
 {
-
-	t_ivec	start;
-	t_ivec	end;
-
-
-	start.x = coord.x;
-	start.y = coord.y;
-	end.x = (coord.x + src->width) % dst->width;
-	end.y = (coord.y + src->height) % dst->height;
-
-	if (end.y > start.y)
+	int i = -1;
+	int	copy1_height = MIN((dst->height - coord.y), src->height);
+	while(++i < copy1_height)
 	{
-		int i = -1;
-		while(++i < src->height)
-		{
-			u_int32_t *src_row = (u_int32_t *)src->data + (i * src->width);
-			u_int32_t *dst_row = (u_int32_t *)dst->data + ((i + coord.y) * dst->width) + coord.x;
+		u_int32_t *src_row = (u_int32_t *)src->data + (i * src->width);
+		u_int32_t *dst_row = (u_int32_t *)dst->data + ((i + coord.y) * dst->width) + coord.x;
 
-			if (end.x > start.x)
-				copy_row(src_row, dst_row, src->width);
-			else
-			{
-				int	copy1_width = dst->width - start.x;
-				copy_row(src_row, dst_row, copy1_width);
-				copy_row(src_row + copy1_width - 1, dst_row + copy1_width - dst->width, end.x + 1);
-			}
-		}
+		int	copy1_width = MIN((dst->width - coord.x), src->width);
+		copy_row(src_row, dst_row, copy1_width);
+		copy_row(src_row + copy1_width - 1, dst_row + copy1_width - dst->width, src->width - copy1_width);
 	}
-	else
+	i--;
+	while(++i < src->height)
 	{
-		int i = -1;
-		int	copy1_height = dst->height - start.y;
-		while(++i < copy1_height)
-		{
-			u_int32_t *src_row = (u_int32_t *)src->data + (i * src->width);
-			u_int32_t *dst_row = (u_int32_t *)dst->data + ((i + coord.y) * dst->width) + coord.x;
+		u_int32_t *src_row = (u_int32_t *)src->data + (i * src->width);
+		u_int32_t *dst_row = (u_int32_t *)dst->data + ((i - copy1_height) * dst->width) + coord.x;
 
-			if (end.x > start.x)
-				copy_row(src_row, dst_row, src->width);
-			else
-			{
-				int	copy1_width = dst->width - start.x;
-				copy_row(src_row, dst_row, copy1_width);
-				copy_row(src_row + copy1_width - 1, dst_row + copy1_width - dst->width, end.x + 1);
-			}
-		}
-		while(i < src->height)
-		{
-			u_int32_t *src_row = (u_int32_t *)src->data + (i * src->width);
-			u_int32_t *dst_row = (u_int32_t *)dst->data + ((i - copy1_height) * dst->width) + coord.x;
-
-			if (end.x > start.x)
-				copy_row(src_row, dst_row, src->width);
-			else
-			{
-				int	copy1_width = dst->width - start.x;
-				copy_row(src_row, dst_row, copy1_width);
-				copy_row(src_row + copy1_width - 1, dst_row + copy1_width - dst->width, end.x + 1);
-			}
-			i++;
-		}
+		int	copy1_width = MIN((dst->width - coord.x), src->width);
+		copy_row(src_row, dst_row, copy1_width);
+		copy_row(src_row + copy1_width - 1, dst_row + copy1_width - dst->width, src->width - copy1_width);
 	}
 }
 
