@@ -11,6 +11,7 @@
 /* ************************************************************************** */
 
 #include <sysexits.h>
+#include <math.h>
 #include "mlx-test.h"
 
 
@@ -132,7 +133,13 @@ int key_press(KeySym key, void *param)
 	}
 	else if (key == XK_a || key == XK_s || key == XK_d || key == XK_w)
 	{
-		transform(app, &app->fish, key);
+		float angle_rad = app->player.angle_rad;
+
+		if (key == XK_a) angle_rad -= M_PI_4;
+		else if (key == XK_d) angle_rad += M_PI_4;
+//		transform(app, &app->fish, key);
+		rotate_img(app->player.src, app->player.avatar, angle_rad);
+		app->player.angle_rad = angle_rad - 2 * M_PI * floor(angle_rad / (2 * M_PI));
 		redraw_img(app);
 	}
 	return (0);
@@ -199,6 +206,7 @@ int main(void)
 	app->framerate = 100;
 	app->fr_delay = 1000000 / app->framerate;
 	app->fish.avatar = mlx_xpm_file_to_image(app->mlx, (char *)"lib/minilibx-linux/test/open.xpm", &dummy.width, &dummy.height);
+	app->player.src = mlx_xpm_file_to_image(app->mlx, (char *)"textures/map_pointer.xpm", &dummy.width, &dummy.height);
 	app->player.avatar = mlx_xpm_file_to_image(app->mlx, (char *)"textures/map_pointer.xpm", &dummy.width, &dummy.height);
 	app->fish.dir = (t_ivec){.x = -1, .y = 0};
 	app->fish.coord = (t_ivec){.x = (WIN_WIDTH / 2) - (app->fish.avatar->width / 2), .y = 0};

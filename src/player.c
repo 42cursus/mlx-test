@@ -11,10 +11,95 @@
 /* ************************************************************************** */
 
 #include "mlx-test.h"
+#include <math.h>
+#include <stdint.h>
+
+t_ivec	get_rotated_bounds(int w, int h, float angle)
+{
+	const float c = fabsf(cosf(angle));
+	const float s = fabsf(sinf(angle));
+	const int x = (int)ceilf(w * c + h * s);
+	const int y = (int)ceilf(w * s + h * c);
+
+	return (t_ivec){.x = x, .y = y};
+}
+
+void rotate_img(t_img *src, t_img *dst, float angle_rad)
+{
+	t_ivec	b = get_rotated_bounds(src->width, src->height, M_PI_4);
+	t_img	*tmp = &(t_img){.width = b.x, .height = b.y};
+
+	tmp->data = malloc(b.x * b.y * sizeof(int));
+	fill_with_colour(tmp, XPM_TRANSPARENT, XPM_TRANSPARENT);
+	rotate_arbitrary_blit(tmp, src, angle_rad);
+	int start_col = b.x / 2 - src->width / 2;
+	int start_row = b.y / 2 - src->height / 2;
+
+	u_int32_t	*src_row;
+	u_int32_t	*dst_row;
+
+	int y = -1;
+	while(++y < src->height)
+	{
+		src_row = (u_int32_t *) tmp->data + (y + start_row) * tmp->width + start_col;
+		dst_row = (u_int32_t *) dst->data + (y * dst->width);
+		int x = -1;
+		while (++x < src->width)
+			dst_row[x] = src_row[x];
+	}
+	free(tmp->data);
+}
+
+void rotate_arbitrary_blit(t_img *dst, t_img *src, float angle_rad)
+{
+	uint32_t *const	src_data = (uint32_t *)src->data;
+	uint32_t *const	dst_data = (uint32_t *)dst->data;
+
+	int sw = src->width;
+	int sh = src->height;
+	int dw = dst->width;
+	int dh = dst->height;
+
+	
+	
+	float cx_src = sw / 2.0f;
+	float cy_src = sh / 2.0f;
+	float cx_dst = dw / 2.0f;
+	float cy_dst = dh / 2.0f;
+
+	float cos_a = cosf(angle_rad);
+	float sin_a = sinf(angle_rad);
+
+	int y = -1;
+	while (++y < dh)
+	{
+		int x = -1;
+		while (++x < dw)
+		{
+			// Compute source coords by inverse rotation
+			float tx = x - cx_dst;
+			float ty = y - cy_dst;
+
+			float sx = tx * cos_a + ty * sin_a + cx_src;
+			float sy = -tx * sin_a + ty * cos_a + cy_src;
+
+			int isx = (int)(sx + 0.5f);
+			int isy = (int)(sy + 0.5f);
+
+			if (isx >= 0 && isx < sw && isy >= 0 && isy < sh)
+			{
+				uint32_t pixel = src_data[isy * sw + isx];
+				uint32_t mask = -(pixel != XPM_TRANSPARENT);
+				dst_data[y * dw + x] = (pixel & mask) | (dst_data[y * dw + x] & ~mask);
+			}
+		}
+	}
+}
 
 /**
  * blit is short for bit block transfer.
  *  often written as bitblt (from bit + block transfer).
+ *  https://en.wikipedia.org/wiki/Bit_blit
  * @param dst
  * @param src
  * @param angle

@@ -31,6 +31,12 @@ typedef struct s_ivec
 	int	y;
 }	t_ivec;
 
+typedef struct s_fvec
+{
+	float	x;
+	float	y;
+}	t_fvec;
+
 typedef enum e_transform_type
 {
 	TR_NONE,
@@ -54,7 +60,8 @@ typedef struct s_entity
 {
 	t_ivec	coord;
 	t_ivec	dir;
-	double	angle;
+	float	angle_rad;
+	t_img	*src;
 	t_img	*avatar;
 }	t_entity;
 
@@ -103,6 +110,9 @@ void	flip(t_xvar *mlx, t_img *src, t_tr_type type);
 void	rotate90_blit(t_img *dst, t_img *src, t_tr_type transform);
 void	flip_blit(t_img *dst, t_img *src, t_tr_type transform);
 void	transform(t_info *const app, t_entity *entity, KeySym key);
-void apply_transform(t_info *const app, t_img *img, t_ivec new_dir,
+void	apply_transform(t_info *const app, t_img *img, t_ivec new_dir,
 					 t_tr_type type);
+void	rotate_img(t_img *src, t_img *dst, float angle_rad);
+void	rotate_arbitrary_blit(t_img *dst, t_img *src, float angle_rad);
+t_ivec	get_rotated_bounds(int w, int h, float angle);
 #endif //MLX_TEST_H
