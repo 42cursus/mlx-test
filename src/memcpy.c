@@ -16,12 +16,23 @@
 #include <sys/param.h>
 #include "mlx-test.h"
 
-void	pix_dup(const t_img *src, const t_img *dst)
+void	pix_dup(t_img *const src, t_img *const dst)
 {
-	memcpy(dst->data, src->data, src->width * src->height * src->bpp / 8);
+	if (src->height != dst->height || src->size_line != dst->size_line)
+		return ;
+	memcpy(dst->data, src->data, src->height * src->size_line);
 }
 
-void	pix_copy(const t_img *src, const t_img *dst, t_ivec coord)
+t_img	*img_dup(t_info *app, t_img *const src)
+{
+	t_img *const new = mlx_new_image(app->mlx, src->width, src->height);
+	if (!new)
+		return (NULL);
+	pix_dup(src, new);
+	return (new);
+}
+
+void	pix_copy(t_img *const src, t_img *const dst, t_ivec coord)
 {
 	int i = -1;
 	while(++i < src->height)

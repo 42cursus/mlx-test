@@ -206,8 +206,26 @@ int main(void)
 	app->framerate = 100;
 	app->fr_delay = 1000000 / app->framerate;
 	app->fish.avatar = mlx_xpm_file_to_image(app->mlx, (char *)"lib/minilibx-linux/test/open.xpm", &dummy.width, &dummy.height);
-	app->player.src = mlx_xpm_file_to_image(app->mlx, (char *)"textures/map_pointer.xpm", &dummy.width, &dummy.height);
-	app->player.avatar = mlx_xpm_file_to_image(app->mlx, (char *)"textures/map_pointer.xpm", &dummy.width, &dummy.height);
+
+
+	t_img *dst = mlx_new_image(app->mlx, 400, 400);
+
+	fill_with_colour(dst, XPM_TRANSPARENT, XPM_TRANSPARENT);
+
+	t_point center = (t_point){.x = dst->width / 2, .y = dst->height / 2 };
+
+	int color = MLX_DTURQUOISE;
+	int i = -1;
+	while (mlx_col_name[++i].name)
+		if (!strcasecmp(mlx_col_name[i].name, "light slate"))
+			color = mlx_col_name[i].color;
+
+	draw_ring_segment(dst, center, 150, 50,  M_1_PI * 9, M_1_PI * 11, color);
+	draw_circle_stroke(dst, center, 42, 5, color);
+
+	app->player.src = dst;
+	app->player.avatar = img_dup(app, app->player.src);
+
 	app->fish.dir = (t_ivec){.x = -1, .y = 0};
 	app->fish.coord = (t_ivec){.x = (WIN_WIDTH / 2) - (app->fish.avatar->width / 2), .y = 0};
 	app->player.coord = (t_ivec){.x = (WIN_WIDTH / 2) - (app->player.avatar->width / 2), .y = (WIN_HEIGHT / 2) - (app->player.avatar->height / 2)};
