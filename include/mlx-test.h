@@ -98,26 +98,31 @@ typedef enum e_dir
 typedef struct s_entity
 {
 	t_ivec	coord;
-	t_ivec	dir;
-	float	angle_rad;
+	t_ivec	direct;
+	t_vect	dir;
+	double	angle_rad;
 	t_img	*src;
+	t_img	*src2;
 	t_img	*avatar;
 }	t_entity;
 
 typedef struct s_info
 {
 	t_xvar		*mlx;
-	t_win_list	*root;
+	t_win_list	*win;
 	int			fullscreen;
 	char 		*title;
 	t_img		*canvas;
 	t_entity	player;
 	t_entity	fish;
+	int			default_color;
 	int			clip_x_origin;
 	int			clip_y_origin;
 	size_t		last_frame;
 	size_t		fr_delay;
 	size_t		framerate;
+	double		fr_scale;
+	int			sensitivity;
 }	t_info;
 
 typedef struct s_col_name t_col_name;
@@ -130,6 +135,11 @@ int		render(void *param);
 size_t	get_time_us(void);
 void	on_expose(t_info *app);
 int		key_press(KeySym key, void *param);
+
+int		mouse_move(int x, int y, void *param);
+int		mouse_press(unsigned int button, int x, int y, void *param);
+void	rotate_vect_inplace(t_vect *vect, double angle);
+void	rotate_player(t_info *app, t_entity *player, int direction, double sensitivity);
 void	fill_with_colour(t_img *img, int f_col, int c_col);
 
 t_tr_type get_texture_transform(t_ivec base_dir, t_ivec new_dir);
@@ -144,8 +154,9 @@ void	memcpy_sse2(void *dst_void, const void *src_void, size_t size);
 void	pixcpy_sse2(const t_img *src, const t_img *dst);
 t_img	*img_dup(t_info *app, t_img *src);
 void	pix_dup(t_img *src, t_img *dst);
-void	pix_copy(t_img *src, t_img *dst, t_ivec coord);
-void	pix_copy_safe(const t_img *src, const t_img *dst, t_ivec coord);
+void	pix_copy(t_img *src, t_img *dst, t_point coord);
+void	pix_copy_alpha(t_img *image, t_img *tile, t_point p);
+void	pix_copy_safe(const t_img *src, const t_img *dst, t_point coord);
 void	copy_row(const u_int32_t *src_row, u_int32_t *dst_row, int width);
 void	redraw_img(t_info *const app);
 void	rotate90(t_xvar *mlx, t_img *src, t_tr_type transform);
@@ -155,19 +166,23 @@ void	flip_blit(t_img *dst, t_img *src, t_tr_type transform);
 void	transform(t_info *const app, t_entity *entity, KeySym key);
 void	apply_transform(t_info *const app, t_img *img, t_ivec new_dir,
 					 t_tr_type type);
-void	rotate_img(t_img *src, t_img *dst, float angle_rad);
-void	rotate_arbitrary_blit(t_img *dst, t_img *src, float angle_rad);
+void	rotate_img(t_img *src, t_img *dst, double angle_rad);
+void	rotate_arbitrary_blit(t_img *dst, t_img *src, double angle_rad);
 t_ivec	get_rotated_bounds(int w, int h, float angle);
 
-int		interpolate_colour(int col1, int col2, double frac);
+u_int	interpolate_colour(t_colour *col1, t_colour *col2);
+int		interpolate_colour2(int col1, int col2);
 void	put_pixel_alpha(t_img *img, t_point p, int base_color, double alpha_frac);
+void	put_pixel_alpha_add(t_img *img, t_point p, int base_color, double alpha_frac);
 void	draw_circle_wu(t_img *img, t_point c, int r, int color);
 void	draw_circle_bresenham(t_img *img, t_point c, int r, int color);
 void	draw_circle_on_img(t_img *img, t_point c, int r, int color);
-void	put_pixel_alpha_add(t_img *img, t_point p, int base_color, double alpha_frac);
+
 void	draw_circle_stroke(t_img *img, t_point c, int r, int thickness, int color);
 void	draw_circle_filled(t_img *img, t_point c, int r, int color);
 void	draw_ring(t_img *img, t_point c, int r_outer, int r_inner, int color);
 void	draw_ring_segment(t_img *img, t_point c, int r_outer, int r_inner,
+					   double angle_start, double angle_end, int color);
+void	draw_ring_segment2(t_img *img, t_point c, int r_outer, int r_inner,
 					   double angle_start, double angle_end, int color);
 #endif //MLX_TEST_H

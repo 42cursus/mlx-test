@@ -31,6 +31,7 @@ set(FT_CFLAGS
         -Wno-error=unused-parameter
         -Wno-error=unused-variable
         -O0
+        -pg
         -masm=att
         -g3 -gdwarf-3 -pg
         -fasynchronous-unwind-tables

@@ -24,7 +24,7 @@ t_ivec	get_rotated_bounds(int w, int h, float angle)
 	return (t_ivec){.x = x, .y = y};
 }
 
-void rotate_img(t_img *src, t_img *dst, float angle_rad)
+void rotate_img(t_img *src, t_img *dst, double angle_rad)
 {
 	t_ivec	b = get_rotated_bounds(src->width, src->height, M_PI_4);
 	t_img	*tmp = &(t_img){.width = b.x, .height = b.y};
@@ -50,7 +50,7 @@ void rotate_img(t_img *src, t_img *dst, float angle_rad)
 	free(tmp->data);
 }
 
-void rotate_arbitrary_blit(t_img *dst, t_img *src, float angle_rad)
+void rotate_arbitrary_blit(t_img *dst, t_img *src, double angle_rad)
 {
 	uint32_t *const	src_data = (uint32_t *)src->data;
 	uint32_t *const	dst_data = (uint32_t *)dst->data;
@@ -60,15 +60,15 @@ void rotate_arbitrary_blit(t_img *dst, t_img *src, float angle_rad)
 	int dw = dst->width;
 	int dh = dst->height;
 
-	
-	
-	float cx_src = sw / 2.0f;
-	float cy_src = sh / 2.0f;
-	float cx_dst = dw / 2.0f;
-	float cy_dst = dh / 2.0f;
 
-	float cos_a = cosf(angle_rad);
-	float sin_a = sinf(angle_rad);
+
+	double cx_src = sw / 2.0;
+	double cy_src = sh / 2.0;
+	double cx_dst = dw / 2.0;
+	double cy_dst = dh / 2.0;
+
+	double cos_a = cos(angle_rad);
+	double sin_a = sin(angle_rad);
 
 	int y = -1;
 	while (++y < dh)
@@ -77,11 +77,11 @@ void rotate_arbitrary_blit(t_img *dst, t_img *src, float angle_rad)
 		while (++x < dw)
 		{
 			// Compute source coords by inverse rotation
-			float tx = x - cx_dst;
-			float ty = y - cy_dst;
+			double tx = x - cx_dst;
+			double ty = y - cy_dst;
 
-			float sx = tx * cos_a + ty * sin_a + cx_src;
-			float sy = -tx * sin_a + ty * cos_a + cy_src;
+			double sx = tx * cos_a + ty * sin_a + cx_src;
+			double sy = -tx * sin_a + ty * cos_a + cy_src;
 
 			int isx = (int)(sx + 0.5f);
 			int isy = (int)(sy + 0.5f);

@@ -16,9 +16,10 @@ int	cleanup(t_info *app)
 {
 	mlx_destroy_image(app->mlx, app->fish.avatar);
 	mlx_destroy_image(app->mlx, app->player.src);
+	mlx_destroy_image(app->mlx, app->player.src2);
 	mlx_destroy_image(app->mlx, app->player.avatar);
 	mlx_destroy_image(app->mlx, app->canvas);
-	mlx_destroy_window(app->mlx, app->root);
+	mlx_destroy_window(app->mlx, app->win);
 	mlx_destroy_display(app->mlx);
 	free(app->mlx);
 	return (0);

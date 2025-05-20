@@ -32,7 +32,7 @@ t_img	*img_dup(t_info *app, t_img *const src)
 	return (new);
 }
 
-void	pix_copy(t_img *const src, t_img *const dst, t_ivec coord)
+void	pix_copy(t_img *const src, t_img *const dst, t_point coord)
 {
 	int i = -1;
 	while(++i < src->height)
@@ -44,7 +44,29 @@ void	pix_copy(t_img *const src, t_img *const dst, t_ivec coord)
 		{
 			u_int32_t src_pixel = src_row[j];
 			u_int32_t mask = -(src_pixel != XPM_TRANSPARENT);
-			dst_row[j] = (src_pixel & mask) | (dst_row[j] & ~mask);
+			u_int32_t i_1 = (src_pixel & mask) | (dst_row[j] & ~mask);
+			dst_row[j] = i_1;
+		}
+	}
+}
+
+void	pix_copy_alpha(t_img *image, t_img *tile, t_point p)
+{
+	int			i;
+	int			j;
+	u_int32_t	*src_row;
+	u_int32_t	*dst_row;
+
+	i = -1;
+	while (++i < tile->height)
+	{
+		src_row = (u_int32_t *) tile->data + (i * tile->width);
+		dst_row = (u_int32_t *) image->data + ((i + p.y) * image->width) + p.x;
+		j = -1;
+		while (++j < tile->width)
+		{
+			int i_1 = interpolate_colour((t_colour *)&src_row[j], (t_colour *)&dst_row[j]);
+			dst_row[j] = i_1;
 		}
 	}
 }

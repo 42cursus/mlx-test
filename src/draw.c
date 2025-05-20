@@ -13,7 +13,23 @@
 #include <math.h>
 #include "mlx-test.h"
 
-int	interpolate_colour(int col1, int col2, double frac)
+u_int	interpolate_colour(t_colour *col1, t_colour *col2)
+{
+	int	r;
+	int	g;
+	int	b;
+
+	if (col1->raw == col2->raw)
+		return col2->raw;
+
+	const double frac = col1->a / 255.0;
+	r = ((col2->r - col1->r) * frac) + col1->r;
+	g = ((col2->g - col1->g) * frac) + col1->g;
+	b = ((col2->b - col1->b) * frac) + col1->b;
+	return ((t_colour){.r = r, .g = g, .b = b}).raw;
+}
+
+int	interpolate_colour2(int col1, int col2)
 {
 	int	r;
 	int	g;
@@ -21,6 +37,7 @@ int	interpolate_colour(int col1, int col2, double frac)
 
 	if (col1 == col2)
 		return (col1);
+	const double frac = (col1 & XPM_TRANSPARENT) / 255.0;
 	r = ((col2 & MLX_RED) - (col1 & MLX_RED)) * frac + (col1 & MLX_RED);
 	g = ((col2 & MLX_GREEN) - (col1 & MLX_GREEN)) * frac + (col1 & MLX_GREEN);
 	b = ((col2 & MLX_BLUE) - (col1 & MLX_BLUE)) * frac + (col1 & MLX_BLUE);
@@ -41,6 +58,29 @@ void	put_pixel_alpha(t_img *img, t_point p, int base_color, double alpha_frac)
 
 	// Write RGB from base_color and new alpha
 	*dst = (alpha << 24) | (base_color & MLX_WHITE);
+}
+
+void	put_pixel_alpha_add(t_img *img, t_point p, int base_color, double alpha_frac)
+{
+	int 				alpha;
+	u_int				new_alpha;
+	u_int32_t * const	dst = (u_int32_t *)img->data + p.y * img->width + p.x;
+
+	if (p.x < 0 || p.y < 0 || p.x >= img->width || p.y >= img->height || alpha_frac <= 0.0)
+		return;
+
+	alpha = (int) (alpha_frac * 255.0);
+	if (alpha < 0)
+		alpha = 0;
+	if (alpha > 255)
+		alpha = 255;
+
+	if (((t_colour *)dst)->a >= 255)
+		return;
+	new_alpha = ((t_colour *)dst)->a + alpha;
+	if (new_alpha > 255)
+		new_alpha = 255;
+	*dst = (new_alpha << 24) | (base_color & MLX_WHITE);
 }
 
 /**
@@ -138,29 +178,6 @@ void	draw_circle_on_img(t_img *img, t_point c, int r, int color)
 		dst_row[x] = color;
 		theta += step;
 	}
-}
-
-void	put_pixel_alpha_add(t_img *img, t_point p, int base_color, double alpha_frac)
-{
-	int 				alpha;
-	u_int				new_alpha;
-	u_int32_t * const	dst = (u_int32_t *)img->data + p.y * img->width + p.x;
-
-	if (p.x < 0 || p.y < 0 || p.x >= img->width || p.y >= img->height || alpha_frac <= 0.0)
-		return;
-
-	alpha = (int) (alpha_frac * 255.0);
-	if (alpha < 0)
-		alpha = 0;
-	if (alpha > 255)
-		alpha = 255;
-
-	if (((t_colour *)dst)->a >= 255)
-		return;
-	new_alpha = ((t_colour *)dst)->a + alpha;
-	if (new_alpha > 255)
-		new_alpha = 255;
-	*dst = (new_alpha << 24) | (base_color & MLX_WHITE);
 }
 
 void draw_circle_stroke(t_img *img, t_point c, int r, int thickness, int color)
@@ -277,6 +294,50 @@ void draw_ring_segment(t_img *img, t_point c, int r_outer, int r_inner,
 					alpha = r_outer - dist;
 				t_point cc = (t_point){.x =  c.x + x, .y = c.y + y};
 				put_pixel_alpha(img,cc, color, alpha);
+			}
+		}
+	}
+}
+
+void draw_ring_segment2(t_img *img, t_point c, int r_outer, int r_inner,
+					   double angle_start, double angle_end, int color)
+{
+	int		x;
+	int		y;
+	double	dist;
+	double	angle;
+	double	alpha;
+
+	y = -r_outer - 1;
+	while (++y <= r_outer)
+	{
+		x = -r_outer - 1;
+		while(++x <= r_outer)
+		{
+			dist = sqrt(x * x + y * y);
+			if (dist < r_inner - 1.0 || dist > r_outer)
+				continue;
+			angle = atan2(y, x); // from -π to π
+			if (angle < 0)
+				angle += 2 * M_PI;
+			if (angle >= angle_start && angle <= angle_end)
+			{
+				alpha = 1.0;
+				if (dist < r_inner)
+					alpha = dist - (r_inner - 1.0);
+				else if (dist > r_outer - 1.0)
+					alpha = r_outer - dist;
+
+				t_point cc = (t_point){.x =  c.x + x, .y = c.y + y};
+				u_int32_t *dst = (u_int32_t *) img->data + cc.y * img->width + cc.x;
+
+				// Clamp and convert to 0-255 range
+				u_int alpha_1 = (u_int) (alpha * 255.0);
+				if (alpha_1 >= 255)
+					alpha_1 = 127;
+
+				// Write RGB from base_color and new alpha
+				*dst = (alpha_1 << 24) | (color & MLX_WHITE);
 			}
 		}
 	}

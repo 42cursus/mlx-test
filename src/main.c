@@ -34,7 +34,7 @@ void mlx_allow_resize_win(Display *display, Window win)
 static void toggle_fullscreen(t_info *const app)
 {
 	Display *dpy = app->mlx->display;
-	Window win = app->root->window;
+	Window win = app->win->window;
 
 	Atom wm_fullscreen = XInternAtom(dpy, "_NET_WM_STATE_FULLSCREEN", False);
 
@@ -49,12 +49,12 @@ static void toggle_fullscreen(t_info *const app)
 	xev.xclient.data.l[3] = 1;
 	xev.xclient.data.l[4] = 0;
 	if (app->fullscreen)
-		mlx_allow_resize_win(app->mlx->display, app->root->window);
+		mlx_allow_resize_win(app->mlx->display, app->win->window);
 	XSendEvent(dpy, app->mlx->root, False,
 			   SubstructureNotifyMask | SubstructureRedirectMask,
 			   &xev);
 	if (!app->fullscreen)
-		mlx_int_anti_resize_win(app->mlx, app->root->window,
+		mlx_int_anti_resize_win(app->mlx, app->win->window,
 								WIN_WIDTH, WIN_HEIGHT);
 }
 
@@ -69,8 +69,8 @@ int	exit_win(t_info *const	app)
 void redraw_img(t_info *const app)
 {
 	fill_with_colour(app->canvas, MLX_TANG_YELLOW, MLX_DTURQUOISE);
-	pix_copy(app->player.avatar, app->canvas, app->player.coord);
 	pix_copy_safe(app->fish.avatar, app->canvas, app->fish.coord);
+	pix_copy_alpha(app->canvas, app->player.src2, app->player.coord);
 }
 
 void apply_transform(t_info *const app, t_img *img, t_ivec new_dir,
@@ -80,7 +80,7 @@ void apply_transform(t_info *const app, t_img *img, t_ivec new_dir,
 		flip(app->mlx, img, type);
 	else
 		rotate90(app->mlx, img, type);
-	app->fish.dir = new_dir;
+	app->fish.direct = new_dir;
 }
 
 void transform(t_info *const app, t_entity *entity, KeySym key)
@@ -99,10 +99,89 @@ void transform(t_info *const app, t_entity *entity, KeySym key)
 	else if (key == XK_s) new_y += avatar->height;
 	new_dir = norm_ivec(sub_ivec(ivec(new_x, new_y), entity->coord));
 	apply_transform(app, avatar, new_dir,
-					get_texture_transform(entity->dir, new_dir));
+					get_texture_transform(entity->direct, new_dir));
 	new_x = (new_x + canvas->width) % canvas->width;
 	new_y = (new_y + canvas->height) % canvas->height;
 	entity->coord = ivec(new_x, new_y);
+}
+
+void rotate_vect_inplace(t_vect *vect, double angle)
+{
+	double temp_x;
+	double temp_y;
+
+	temp_x = (vect->x * cos(angle)) - (vect->y * sin(angle));
+	temp_y = (vect->x * sin(angle)) + (vect->y * cos(angle));
+	vect->x = temp_x;
+	vect->y = temp_y;
+}
+
+void	rotate_player(t_info *app, t_entity *player, int direction, double sensitivity)
+{
+	const double angle = (double []){-M_PI_4, M_PI_4}[direction == 0];
+	double new_angle;
+
+	rotate_vect_inplace(&player->dir,  angle);
+	new_angle = atan2(player->dir.y, player->dir.x);
+	rotate_img(app->player.src, app->player.avatar, app->player.angle_rad - new_angle);
+	app->player.angle_rad = new_angle;
+}
+
+int mouse_move(int x, int y, void *param)
+{
+	t_info *const app = param;
+
+	int dx = x - WIN_WIDTH / 2;
+
+	if (dx != 0)
+	{
+//		rotate_player(app, &app->player, dx > 0, app->sensitivity);
+//		mlx_mouse_move(app->mlx, app->win, WIN_WIDTH / 2, WIN_HEIGHT / 2); 		// Reset pointer to center
+
+//		XFlush(app->mlx->display);
+
+		double angle_rad = app->player.angle_rad;
+		double diff = abs(dx / 2) * M_PI / 360;
+		t_point center = (t_point){.x = app->player.src->width / 2, .y = app->player.src->height / 2 };
+
+		if (dx > 0) angle_rad += diff;
+		else angle_rad -= diff;
+		angle_rad = angle_rad - 2 * M_PI * floor(angle_rad / (2 * M_PI));
+//		transform(app, &app->fish, key);
+//		rotate_img(app->player.src, app->player.avatar, angle_rad);
+		pix_dup(app->player.src, app->player.src2);
+		draw_ring_segment2(app->player.src2, center, 150, 50,  angle_rad - M_1_PI, angle_rad + M_1_PI, app->default_color);
+		app->player.angle_rad = angle_rad;
+		mlx_mouse_move(app->mlx, app->win, WIN_WIDTH / 2, WIN_HEIGHT / 2); 		// Reset pointer to center
+		XFlush(app->mlx->display);
+	}
+
+	return (0);
+	int dy = y - WIN_HEIGHT / 2;
+	(void) dy;
+}
+
+int mouse_press(unsigned int button, int x, int y, void *param)
+{
+	t_info *const app = param;
+
+
+	if (button == 1)
+		;
+	else if (button == 3)
+		;
+	else if (button == 5 || button == 4)
+	{
+		float angle_rad = app->player.angle_rad;
+
+		if (button == 4) angle_rad -= M_1_PI;
+		else if (button == 5) angle_rad += M_1_PI;
+		rotate_img(app->player.src, app->player.avatar, angle_rad);
+		app->player.angle_rad = angle_rad - 2 * M_PI * floor(angle_rad / (2 * M_PI));
+		redraw_img(app);
+	}
+	return (0);
+	((void) x, (void) y);
 }
 
 int key_press(KeySym key, void *param)
@@ -129,7 +208,7 @@ int key_press(KeySym key, void *param)
 		new_coord.x = (new_coord.x + app->canvas->width) % app->canvas->width;
 		new_coord.y = (new_coord.y + app->canvas->height) % app->canvas->height;
 		app->player.coord = new_coord;
-		redraw_img(app);
+//		redraw_img(app);
 	}
 	else if (key == XK_a || key == XK_s || key == XK_d || key == XK_w)
 	{
@@ -140,7 +219,7 @@ int key_press(KeySym key, void *param)
 //		transform(app, &app->fish, key);
 		rotate_img(app->player.src, app->player.avatar, angle_rad);
 		app->player.angle_rad = angle_rad - 2 * M_PI * floor(angle_rad / (2 * M_PI));
-		redraw_img(app);
+//		redraw_img(app);
 	}
 	return (0);
 }
@@ -155,7 +234,7 @@ size_t	get_time_us(void)
 
 void on_expose(t_info *app)
 {
-	mlx_put_image_to_window(app->mlx, app->root,
+	mlx_put_image_to_window(app->mlx, app->win,
 							app->canvas, app->clip_x_origin,
 							app->clip_y_origin);
 }
@@ -169,6 +248,7 @@ int	render(void *param)
 	app->last_frame = time;
 	while (get_time_us() - app->last_frame < app->fr_delay)
 		usleep(500);
+	redraw_img(app);
 	on_expose(app);
 	return (0);
 }
@@ -198,47 +278,55 @@ void fill_with_colour(t_img *img, int f_col, int c_col)
 
 int main(void)
 {
-	t_info	*const	app = &(t_info){.title = (char *)"mlx-test"};
+	t_info	*const	app = &(t_info){.title = (char *)"mlx-test", .sensitivity = 7, };
 	t_img	dummy;
 
 	app->mlx = mlx_init();
 	app->canvas = mlx_new_image(app->mlx, WIN_WIDTH, WIN_HEIGHT);
 	app->framerate = 100;
 	app->fr_delay = 1000000 / app->framerate;
+	app->fr_scale = (double)app->framerate / 50.0;
 	app->fish.avatar = mlx_xpm_file_to_image(app->mlx, (char *)"lib/minilibx-linux/test/open.xpm", &dummy.width, &dummy.height);
-
-
-	t_img *dst = mlx_new_image(app->mlx, 400, 400);
-
-	fill_with_colour(dst, XPM_TRANSPARENT, XPM_TRANSPARENT);
-
-	t_point center = (t_point){.x = dst->width / 2, .y = dst->height / 2 };
-
-	int color = MLX_DTURQUOISE;
+	app->default_color = MLX_DTURQUOISE;
 	int i = -1;
 	while (mlx_col_name[++i].name)
 		if (!strcasecmp(mlx_col_name[i].name, "light slate"))
-			color = mlx_col_name[i].color;
+			app->default_color = mlx_col_name[i].color;
 
-	draw_ring_segment(dst, center, 150, 50,  M_1_PI * 9, M_1_PI * 11, color);
-	draw_circle_stroke(dst, center, 42, 5, color);
 
+	t_img *dst = mlx_new_image(app->mlx, 400, 400);
+	fill_with_colour(dst, XPM_TRANSPARENT, XPM_TRANSPARENT);
+
+
+	t_point center = (t_point){.x = dst->width / 2, .y = dst->height / 2 };
+	draw_circle_stroke(dst, center, 42, 5, app->default_color);
 	app->player.src = dst;
+
+
+	t_img *dst2 = mlx_new_image(app->mlx, 400, 400);
+	pix_dup(dst, dst2);
+	draw_ring_segment2(dst2, center, 150, 50,  M_1_PI * 9 +  app->player.angle_rad, M_1_PI * 11 + app->player.angle_rad, app->default_color);
+
+	app->player.src2 = dst2;
 	app->player.avatar = img_dup(app, app->player.src);
 
-	app->fish.dir = (t_ivec){.x = -1, .y = 0};
-	app->fish.coord = (t_ivec){.x = (WIN_WIDTH / 2) - (app->fish.avatar->width / 2), .y = 0};
+	app->fish.direct = (t_ivec){.x = -1, .y = 0};
+	app->fish.coord = (t_ivec){.x = (WIN_WIDTH / 2) - (app->fish.avatar->width / 2), .y = 100};
 	app->player.coord = (t_ivec){.x = (WIN_WIDTH / 2) - (app->player.avatar->width / 2), .y = (WIN_HEIGHT / 2) - (app->player.avatar->height / 2)};
-	redraw_img(app);
+//	redraw_img(app);
 
-	app->root = mlx_new_window(app->mlx, WIN_WIDTH, WIN_HEIGHT, app->title);
+	app->win = mlx_new_window(app->mlx, WIN_WIDTH, WIN_HEIGHT, app->title);
 
-	mlx_hook(app->root, DestroyNotify, 0, (void *)&exit_win, app);
-	mlx_hook(app->root, KeyPress, KeyPressMask, (void *) &key_press, app);
+	mlx_mouse_hide(app->mlx, app->win);
+
+	mlx_hook(app->win, DestroyNotify, 0, (void *)&exit_win, app);
+	mlx_hook(app->win, KeyPress, KeyPressMask, (void *) &key_press, app);
+	mlx_hook(app->win, ButtonPress, ButtonPressMask, (void *) &mouse_press, app);
+	mlx_hook(app->win, MotionNotify, PointerMotionMask, (void *) &mouse_move, app);
 	mlx_loop_hook(app->mlx, &render, app);
 
 	mlx_loop(app->mlx);
-
+	mlx_mouse_show(app->mlx, app->win);
 	cleanup(app);
 	return (0);
 }
