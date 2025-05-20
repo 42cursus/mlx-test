@@ -95,6 +95,11 @@ typedef enum e_dir
 	NO_DIRS
 }	t_dir;
 
+# define R_OUTER 150
+# define R_INNER 50
+//# define R_OUTER 28
+//# define R_INNER 10
+
 typedef struct s_entity
 {
 	t_ivec	coord;
@@ -185,4 +190,6 @@ void	draw_ring_segment(t_img *img, t_point c, int r_outer, int r_inner,
 					   double angle_start, double angle_end, int color);
 void	draw_ring_segment2(t_img *img, t_point c, int r_outer, int r_inner,
 					   double angle_start, double angle_end, int color);
+void	draw_ring_segment3(t_img *img, int cx, int cy, int r_outer, int r_inner,
+						double angle_start, double angle_end, int color);
 #endif //MLX_TEST_H

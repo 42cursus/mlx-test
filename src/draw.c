@@ -44,6 +44,22 @@ int	interpolate_colour2(int col1, int col2)
 	return ((r & MLX_RED) + (g & MLX_GREEN) + b);
 }
 
+void	put_pixel_alpha_alt(t_img *img, t_point p, int base_color, double alpha_frac);
+void	put_pixel_alpha_alt(t_img *img, t_point p, int base_color, double alpha_frac)
+{
+	if (p.x < 0 || p.y < 0 || p.x >= img->width || p.y >= img->height)
+		return;
+
+	u_int32_t *dst = (u_int32_t *)img->data + p.y * img->width + p.x;
+
+	// Clamp and convert to 0-255 range
+	u_int alpha = (u_int)(alpha_frac * 255.0);
+	if (alpha >= 255)
+		alpha = 127;
+
+	// Write RGB from base_color and new alpha
+	*dst = (alpha << 24) | (base_color & MLX_WHITE);
+}
 void	put_pixel_alpha(t_img *img, t_point p, int base_color, double alpha_frac)
 {
 	if (p.x < 0 || p.y < 0 || p.x >= img->width || p.y >= img->height)
@@ -351,6 +367,58 @@ void draw_ring_segment2(t_img *img, t_point c, int r_outer, int r_inner,
 				// Write RGB from base_color and new alpha
 				*dst = (alpha_1 << 24) | (color & MLX_WHITE);
 			}
+		}
+	}
+}
+
+static inline double smoothstep(double edge0, double edge1, double x)
+{
+	x = (x - edge0) / (edge1 - edge0);
+	if (x < 0.0) x = 0.0;
+	if (x > 1.0) x = 1.0;
+	return x * x * (3 - 2 * x); // classic smoothstep
+}
+
+void draw_ring_segment3(t_img *img, int cx, int cy, int r_outer, int r_inner,
+					   double angle_start, double angle_end, int color)
+{
+	if (angle_start < 0) angle_start += 2 * M_PI;
+	if (angle_end < 0) angle_end += 2 * M_PI;
+	if (angle_start >= 2 * M_PI) angle_start = fmod(angle_start, 2 * M_PI);
+	if (angle_end >= 2 * M_PI) angle_end = fmod(angle_end, 2 * M_PI);
+
+	for (int y = -r_outer - 1; y <= r_outer + 1; ++y)
+	{
+		for (int x = -r_outer - 1; x <= r_outer + 1; ++x)
+		{
+			double fx = x + 0.5;
+			double fy = y + 0.5;
+			double dist = sqrt(fx * fx + fy * fy);
+
+			if (dist > r_outer + 1.0 || dist < r_inner - 1.0)
+				continue;
+
+			double angle = atan2(fy, fx);
+			if (angle < 0) angle += 2 * M_PI;
+
+			int in_angle_range = (angle_start <= angle_end)
+								 ? (angle >= angle_start && angle <= angle_end)
+								 : (angle >= angle_start || angle <= angle_end);
+
+			if (!in_angle_range)
+				continue;
+
+			// Signed distance to ring band (inner and outer)
+			double d_outer = dist - r_outer;
+			double d_inner = r_inner - dist;
+
+			double alpha_outer = smoothstep(1.0, 0.0, d_outer);
+			double alpha_inner = smoothstep(1.0, 0.0, d_inner);
+
+			double alpha = fmin(alpha_outer, alpha_inner);
+			if (alpha > 0.0)
+				put_pixel_alpha(img, (t_point){.x = cx + x, .y = cy + y}, color, alpha);
+
 		}
 	}
 }

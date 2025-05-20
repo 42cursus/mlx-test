@@ -160,16 +160,21 @@ int mouse_move(int x, int y, void *param)
 		if (angle_start >= 2 * M_PI) angle_start = fmod(angle_start, 2 * M_PI);
 		if (angle_end   >= 2 * M_PI) angle_end   = fmod(angle_end, 2 * M_PI);
 
-		draw_ring_segment2(app->player.src2, center, 150, 50, angle_start, angle_end, app->default_color);
+//		draw_ring_segment2(app->player.src2, center, R_OUTER, R_INNER, angle_start, angle_end, app->default_color);
+		draw_ring_segment3(app->player.src2, center.x, center.y, R_OUTER, R_INNER, angle_start, angle_end, app->default_color);
+
+
 		app->player.angle_rad = angle_rad;
 		mlx_mouse_move(app->mlx, app->win, WIN_WIDTH / 2, WIN_HEIGHT / 2); 		// Reset pointer to center
 		XFlush(app->mlx->display);
+		//		redraw_img(app);
 	}
 
 	return (0);
 	int dy = y - WIN_HEIGHT / 2;
 	(void) dy;
 }
+
 
 int mouse_press(unsigned int button, int x, int y, void *param)
 {
@@ -309,7 +314,12 @@ int main(void)
 
 
 	t_point center = (t_point){.x = dst->width / 2, .y = dst->height / 2 };
-	draw_circle_stroke(dst, center, 42, 5, app->default_color);
+//	draw_circle_stroke(dst, center, 42, 5, app->default_color);
+//	draw_circle_filled(dst, center, 3, app->default_color);
+
+	i = 5;
+	while (--i)
+		draw_circle_bresenham(dst, center, i, app->default_color);
 
 //	draw_ring(dst, center, 42, 35, app->default_color);
 //	draw_circle_filled(dst, center, 42, app->default_color);
@@ -318,8 +328,8 @@ int main(void)
 
 	t_img *dst2 = mlx_new_image(app->mlx, 400, 400);
 	pix_dup(dst, dst2);
-	double angle_start = app->player.angle_rad - M_1_PI +  M_PI;
-	double angle_end = app->player.angle_rad + M_1_PI +  M_PI;
+	double angle_start = app->player.angle_rad - M_1_PI / 2 +  M_PI;
+	double angle_end = app->player.angle_rad + M_1_PI / 2 +  M_PI;
 
 
 	// Normalize angles to [0, 2π)
@@ -328,7 +338,8 @@ int main(void)
 	if (angle_start >= 2 * M_PI) angle_start = fmod(angle_start, 2 * M_PI);
 	if (angle_end   >= 2 * M_PI) angle_end   = fmod(angle_end, 2 * M_PI);
 
-	draw_ring_segment2(dst2, center, 150, 50, angle_start, angle_end, app->default_color);
+//	draw_ring_segment2(dst2, center, R_OUTER, R_INNER, angle_start, angle_end, app->default_color);
+	draw_ring_segment3(dst2, center.x, center.y, R_OUTER, R_INNER, angle_start, angle_end, app->default_color);
 
 	app->player.src2 = dst2;
 	app->player.avatar = img_dup(app, app->player.src);
