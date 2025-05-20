@@ -150,7 +150,17 @@ int mouse_move(int x, int y, void *param)
 //		transform(app, &app->fish, key);
 //		rotate_img(app->player.src, app->player.avatar, angle_rad);
 		pix_dup(app->player.src, app->player.src2);
-		draw_ring_segment2(app->player.src2, center, 150, 50,  angle_rad - M_1_PI, angle_rad + M_1_PI, app->default_color);
+
+		double angle_start = angle_rad - M_1_PI;
+		double angle_end = angle_rad + M_1_PI;
+
+		// Normalize angles to [0, 2π)
+		if (angle_start < 0) angle_start += 2 * M_PI;
+		if (angle_end   < 0) angle_end   += 2 * M_PI;
+		if (angle_start >= 2 * M_PI) angle_start = fmod(angle_start, 2 * M_PI);
+		if (angle_end   >= 2 * M_PI) angle_end   = fmod(angle_end, 2 * M_PI);
+
+		draw_ring_segment2(app->player.src2, center, 150, 50, angle_start, angle_end, app->default_color);
 		app->player.angle_rad = angle_rad;
 		mlx_mouse_move(app->mlx, app->win, WIN_WIDTH / 2, WIN_HEIGHT / 2); 		// Reset pointer to center
 		XFlush(app->mlx->display);
@@ -300,12 +310,25 @@ int main(void)
 
 	t_point center = (t_point){.x = dst->width / 2, .y = dst->height / 2 };
 	draw_circle_stroke(dst, center, 42, 5, app->default_color);
-	app->player.src = dst;
 
+//	draw_ring(dst, center, 42, 35, app->default_color);
+//	draw_circle_filled(dst, center, 42, app->default_color);
+	app->player.src = dst;
+	app->player.angle_rad = 0;
 
 	t_img *dst2 = mlx_new_image(app->mlx, 400, 400);
 	pix_dup(dst, dst2);
-	draw_ring_segment2(dst2, center, 150, 50,  M_1_PI * 9 +  app->player.angle_rad, M_1_PI * 11 + app->player.angle_rad, app->default_color);
+	double angle_start = app->player.angle_rad - M_1_PI +  M_PI;
+	double angle_end = app->player.angle_rad + M_1_PI +  M_PI;
+
+
+	// Normalize angles to [0, 2π)
+	if (angle_start < 0) angle_start += 2 * M_PI;
+	if (angle_end   < 0) angle_end   += 2 * M_PI;
+	if (angle_start >= 2 * M_PI) angle_start = fmod(angle_start, 2 * M_PI);
+	if (angle_end   >= 2 * M_PI) angle_end   = fmod(angle_end, 2 * M_PI);
+
+	draw_ring_segment2(dst2, center, 150, 50, angle_start, angle_end, app->default_color);
 
 	app->player.src2 = dst2;
 	app->player.avatar = img_dup(app, app->player.src);

@@ -230,10 +230,14 @@ void	draw_circle_filled(t_img *img, t_point c, int r, int color)
 		{
 			dist = sqrt(x * x + y * y);
 			cc = (t_point){.x = c.x + x, .y = c.y + y};
+			double frac = r - dist;
 			if (dist <= r - 1.0)
-				put_pixel_alpha_add(img, cc, color, 1.0); // full opacity
+				put_pixel_alpha(img, cc, color, 1.0); // full opacity
 			else if (dist <= r)
-				put_pixel_alpha_add(img, cc, color, r - dist); // fade out
+			{
+
+				put_pixel_alpha(img, cc, color, frac);
+			} // fade out
 		}
 	}
 }
@@ -255,11 +259,11 @@ void draw_ring(t_img *img, t_point c, int r_outer, int r_inner, int color)
 			if (dist < r_inner - 1.0 || dist > r_outer)
 				continue;
 			else if (dist <= r_inner)
-				put_pixel_alpha_add(img, cc, color, dist - (r_inner - 1));
+				put_pixel_alpha(img, cc, color, dist - (r_inner - 1));
 			else if (dist <= r_outer - 1.0)
-				put_pixel_alpha_add(img, cc, color, 1.0);
+				put_pixel_alpha(img, cc, color, 0);
 			else
-				put_pixel_alpha_add(img, cc, color, r_outer - dist);
+				put_pixel_alpha(img, cc, color, r_outer - dist);
 		}
 	}
 }
@@ -299,6 +303,14 @@ void draw_ring_segment(t_img *img, t_point c, int r_outer, int r_inner,
 	}
 }
 
+static int angle_in_range(double angle, double start, double end)
+{
+	if (start <= end)
+		return angle >= start && angle <= end;
+	else
+		return angle >= start || angle <= end; // wraps around 2π
+}
+
 void draw_ring_segment2(t_img *img, t_point c, int r_outer, int r_inner,
 					   double angle_start, double angle_end, int color)
 {
@@ -320,7 +332,7 @@ void draw_ring_segment2(t_img *img, t_point c, int r_outer, int r_inner,
 			angle = atan2(y, x); // from -π to π
 			if (angle < 0)
 				angle += 2 * M_PI;
-			if (angle >= angle_start && angle <= angle_end)
+			if (angle_in_range(angle, angle_start, angle_end))
 			{
 				alpha = 1.0;
 				if (dist < r_inner)
