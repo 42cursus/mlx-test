@@ -284,7 +284,15 @@ void draw_ring(t_img *img, t_point c, int r_outer, int r_inner, int color)
 	}
 }
 
-void draw_ring_segment(t_img *img, t_point c, int r_outer, int r_inner,
+static int angle_in_range(double angle, double start, double end)
+{
+	if (start <= end)
+		return angle >= start && angle <= end;
+	else
+		return angle >= start || angle <= end; // wraps around 2π
+}
+
+void	draw_ring_segment(t_img *img, t_point c, int r_outer, int r_inner,
 					   double angle_start, double angle_end, int color)
 {
 	int		x;
@@ -305,7 +313,7 @@ void draw_ring_segment(t_img *img, t_point c, int r_outer, int r_inner,
 			angle = atan2(y, x); // from -π to π
 			if (angle < 0)
 				angle += 2 * M_PI;
-			if (angle >= angle_start && angle <= angle_end)
+			if (angle_in_range(angle, angle_start, angle_end))
 			{
 				alpha = 1.0;
 				if (dist < r_inner)
@@ -313,19 +321,13 @@ void draw_ring_segment(t_img *img, t_point c, int r_outer, int r_inner,
 				else if (dist > r_outer - 1.0)
 					alpha = r_outer - dist;
 				t_point cc = (t_point){.x =  c.x + x, .y = c.y + y};
-				put_pixel_alpha(img,cc, color, alpha);
+				put_pixel_alpha(img,cc, color, 1 - alpha);
 			}
 		}
 	}
 }
 
-static int angle_in_range(double angle, double start, double end)
-{
-	if (start <= end)
-		return angle >= start && angle <= end;
-	else
-		return angle >= start || angle <= end; // wraps around 2π
-}
+
 
 void draw_ring_segment2(t_img *img, t_point c, int r_outer, int r_inner,
 					   double angle_start, double angle_end, int color)
@@ -382,11 +384,7 @@ static inline double smoothstep(double edge0, double edge1, double x)
 void draw_ring_segment3(t_img *img, t_point c, int r_outer, int r_inner,
 					   double angle_start, double angle_end, int color)
 {
-	if (angle_start < 0) angle_start += 2 * M_PI;
-	if (angle_end < 0) angle_end += 2 * M_PI;
-	if (angle_start >= 2 * M_PI) angle_start = fmod(angle_start, 2 * M_PI);
-	if (angle_end >= 2 * M_PI) angle_end = fmod(angle_end, 2 * M_PI);
-
+	normalize_angles(&angle_start, &angle_end); // Normalize angles to [0, 2π)
 	for (int y = -r_outer - 1; y <= r_outer + 1; ++y)
 	{
 		for (int x = -r_outer - 1; x <= r_outer + 1; ++x)
@@ -399,13 +397,10 @@ void draw_ring_segment3(t_img *img, t_point c, int r_outer, int r_inner,
 				continue;
 
 			double angle = atan2(fy, fx);
-			if (angle < 0) angle += 2 * M_PI;
+			if (angle < 0)
+				angle += 2 * M_PI;
 
-			int in_angle_range = (angle_start <= angle_end)
-								 ? (angle >= angle_start && angle <= angle_end)
-								 : (angle >= angle_start || angle <= angle_end);
-
-			if (!in_angle_range)
+			if (!angle_in_range(angle, angle_start, angle_end))
 				continue;
 
 			// Signed distance to ring band (inner and outer)
@@ -416,6 +411,51 @@ void draw_ring_segment3(t_img *img, t_point c, int r_outer, int r_inner,
 			double alpha_inner = smoothstep(1.0, 0.0, d_inner);
 
 			double alpha = 1 - fmin(alpha_outer, alpha_inner);
+			put_pixel_alpha(img, (t_point) {.x = c.x + x, .y = c.y + y},
+							color, alpha);
+		}
+	}
+}
+
+void draw_ring_segment4(t_img *img,  t_point c, int r_outer, int r_inner,
+					   double angle_start, double angle_end, int color)
+{
+	normalize_angles(&angle_start, &angle_end); // Normalize angles to [0, 2π)
+
+	for (int y = -r_outer - 1; y <= r_outer + 1; ++y)
+	{
+		for (int x = -r_outer - 1; x <= r_outer + 1; ++x)
+		{
+			double fx = x + 0.5;
+			double fy = y + 0.5;
+			double dist = sqrt(fx * fx + fy * fy);
+			if (dist > r_outer + 1.0 || dist < r_inner - 1.0)
+				continue;
+
+			double angle = atan2(fy, fx);
+			if (angle < 0) angle += 2 * M_PI;
+
+			if (!angle_in_range(angle, angle_start, angle_end))
+				continue;
+
+			// Radial edge AA
+			double da_start = angle - angle_start;
+			double da_end   = angle_end - angle;
+
+			if (da_start < 0) da_start += 2 * M_PI;
+			if (da_end   < 0) da_end   += 2 * M_PI;
+
+			double a_edge_start = smoothstep(0.0, ANGLE_EPSILON, da_start);
+			double a_edge_end   = smoothstep(0.0, ANGLE_EPSILON, da_end);
+
+			// Radius edge AA
+			double d_outer = dist - r_outer;
+			double d_inner = r_inner - dist;
+			double a_outer = smoothstep(1.0, 0.0, d_outer);
+			double a_inner = smoothstep(1.0, 0.0, d_inner);
+
+			double alpha = 1 - fmin(fmin(a_outer, a_inner), fmin(a_edge_start, a_edge_end));
+
 			put_pixel_alpha(img, (t_point) {.x = c.x + x, .y = c.y + y},
 							color, alpha);
 		}

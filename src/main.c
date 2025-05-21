@@ -154,14 +154,11 @@ int mouse_move(int x, int y, void *param)
 		double angle_start = angle_rad - M_1_PI;
 		double angle_end = angle_rad + M_1_PI;
 
-		// Normalize angles to [0, 2π)
-		if (angle_start < 0) angle_start += 2 * M_PI;
-		if (angle_end   < 0) angle_end   += 2 * M_PI;
-		if (angle_start >= 2 * M_PI) angle_start = fmod(angle_start, 2 * M_PI);
-		if (angle_end   >= 2 * M_PI) angle_end   = fmod(angle_end, 2 * M_PI);
+		normalize_angles(&angle_start, &angle_end); // Normalize angles to [0, 2π)
 
 //		draw_ring_segment2(app->player.src2, center, R_OUTER, R_INNER, angle_start, angle_end, app->default_color);
-		draw_ring_segment3(app->player.src2, center, R_OUTER, R_INNER, angle_start, angle_end, app->default_color);
+		draw_ring_segment(app->player.src2, center, R_OUTER, R_INNER, angle_start, angle_end, app->default_color);
+//		draw_ring_segment4(app->player.src2, center, R_OUTER, R_INNER, angle_start, angle_end, app->default_color);
 
 
 		app->player.angle_rad = angle_rad;
@@ -291,6 +288,14 @@ void fill_with_colour(t_img *img, int f_col, int c_col)
 	}
 }
 
+void	normalize_angles(double *angle_start, double *angle_end)
+{
+	if ((*angle_start) < 0) (*angle_start) += 2 * M_PI;
+	if ((*angle_end) < 0) (*angle_end)   += 2 * M_PI;
+	if ((*angle_start) >= 2 * M_PI) (*angle_start) = fmod((*angle_start), 2 * M_PI);
+	if ((*angle_end) >= 2 * M_PI) (*angle_end)   = fmod((*angle_end), 2 * M_PI);
+}
+
 int main(void)
 {
 	t_info	*const	app = &(t_info){.title = (char *)"mlx-test", .sensitivity = 7, };
@@ -328,18 +333,15 @@ int main(void)
 
 	t_img *dst2 = mlx_new_image(app->mlx, 400, 400);
 	pix_dup(dst, dst2);
-	double angle_start = app->player.angle_rad - M_1_PI / 2 +  M_PI;
-	double angle_end = app->player.angle_rad + M_1_PI / 2 +  M_PI;
 
+	double angle_start = app->player.angle_rad - M_1_PI;
+	double angle_end = app->player.angle_rad + M_1_PI;
 
-	// Normalize angles to [0, 2π)
-	if (angle_start < 0) angle_start += 2 * M_PI;
-	if (angle_end   < 0) angle_end   += 2 * M_PI;
-	if (angle_start >= 2 * M_PI) angle_start = fmod(angle_start, 2 * M_PI);
-	if (angle_end   >= 2 * M_PI) angle_end   = fmod(angle_end, 2 * M_PI);
+	normalize_angles(&angle_start, &angle_end); // Normalize angles to [0, 2π)
 
 //	draw_ring_segment2(dst2, center, R_OUTER, R_INNER, angle_start, angle_end, app->default_color);
-	draw_ring_segment3(app->canvas, center, R_OUTER, R_INNER, angle_start, angle_end, app->default_color);
+	draw_ring_segment(dst2, center, R_OUTER, R_INNER, angle_start, angle_end, app->default_color);
+//	draw_ring_segment4(dst2, center, R_OUTER, R_INNER, angle_start, angle_end, app->default_color);
 
 	app->player.src2 = dst2;
 	app->player.avatar = img_dup(app, app->player.src);

@@ -147,6 +147,7 @@ int		mouse_move(int x, int y, void *param);
 int		mouse_press(unsigned int button, int x, int y, void *param);
 void	rotate_vect_inplace(t_vect *vect, double angle);
 void	rotate_player(t_info *app, t_entity *player, int direction, double sensitivity);
+void	normalize_angles(double *angle_start, double *angle_end);
 void	fill_with_colour(t_img *img, int f_col, int c_col);
 
 t_tr_type get_texture_transform(t_ivec base_dir, t_ivec new_dir);
@@ -193,5 +194,7 @@ void	draw_ring_segment(t_img *img, t_point c, int r_outer, int r_inner,
 void	draw_ring_segment2(t_img *img, t_point c, int r_outer, int r_inner,
 					   double angle_start, double angle_end, int color);
 void	draw_ring_segment3(t_img *img, t_point c, int r_outer, int r_inner,
+						double angle_start, double angle_end, int color);
+void	draw_ring_segment4(t_img *img,  t_point c, int r_outer, int r_inner,
 						double angle_start, double angle_end, int color);
 #endif //MLX_TEST_H
