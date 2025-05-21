@@ -379,7 +379,7 @@ static inline double smoothstep(double edge0, double edge1, double x)
 	return x * x * (3 - 2 * x); // classic smoothstep
 }
 
-void draw_ring_segment3(t_img *img, int cx, int cy, int r_outer, int r_inner,
+void draw_ring_segment3(t_img *img, t_point c, int r_outer, int r_inner,
 					   double angle_start, double angle_end, int color)
 {
 	if (angle_start < 0) angle_start += 2 * M_PI;
@@ -415,10 +415,9 @@ void draw_ring_segment3(t_img *img, int cx, int cy, int r_outer, int r_inner,
 			double alpha_outer = smoothstep(1.0, 0.0, d_outer);
 			double alpha_inner = smoothstep(1.0, 0.0, d_inner);
 
-			double alpha = fmin(alpha_outer, alpha_inner);
-			if (alpha > 0.0)
-				put_pixel_alpha(img, (t_point){.x = cx + x, .y = cy + y}, color, alpha);
-
+			double alpha = 1 - fmin(alpha_outer, alpha_inner);
+			put_pixel_alpha(img, (t_point) {.x = c.x + x, .y = c.y + y},
+							color, alpha);
 		}
 	}
 }

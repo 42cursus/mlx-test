@@ -161,7 +161,7 @@ int mouse_move(int x, int y, void *param)
 		if (angle_end   >= 2 * M_PI) angle_end   = fmod(angle_end, 2 * M_PI);
 
 //		draw_ring_segment2(app->player.src2, center, R_OUTER, R_INNER, angle_start, angle_end, app->default_color);
-		draw_ring_segment3(app->player.src2, center.x, center.y, R_OUTER, R_INNER, angle_start, angle_end, app->default_color);
+		draw_ring_segment3(app->player.src2, center, R_OUTER, R_INNER, angle_start, angle_end, app->default_color);
 
 
 		app->player.angle_rad = angle_rad;
@@ -339,7 +339,7 @@ int main(void)
 	if (angle_end   >= 2 * M_PI) angle_end   = fmod(angle_end, 2 * M_PI);
 
 //	draw_ring_segment2(dst2, center, R_OUTER, R_INNER, angle_start, angle_end, app->default_color);
-	draw_ring_segment3(dst2, center.x, center.y, R_OUTER, R_INNER, angle_start, angle_end, app->default_color);
+	draw_ring_segment3(app->canvas, center, R_OUTER, R_INNER, angle_start, angle_end, app->default_color);
 
 	app->player.src2 = dst2;
 	app->player.avatar = img_dup(app, app->player.src);
