@@ -96,7 +96,8 @@ typedef enum e_dir
 }	t_dir;
 
 # define ANGLE_EPSILON 0.02 // angle blend width (radians)
-
+# define ANGULAR_FEATHER (M_PI / 180.0) // 1 degree
+# define RADIAL_FEATHER 1.0
 # define R_OUTER 150
 # define R_INNER 50
 //# define R_OUTER 28
@@ -181,12 +182,20 @@ t_ivec	get_rotated_bounds(int w, int h, float angle);
 u_int	interpolate_colour(t_colour *col1, t_colour *col2);
 int		interpolate_colour2(int col1, int col2);
 void	put_pixel_alpha(t_img *img, t_point p, int base_color, double alpha_frac);
+void	put_pixel_alpha2(t_img *img, t_point p, int base_color, double alpha_frac);
+void	put_pixel_alpha_blend(t_img *img, t_point p, int base_color, double alpha_frac);
 void	put_pixel_alpha_add(t_img *img, t_point p, int base_color, double alpha_frac);
 void	draw_circle_wu(t_img *img, t_point c, int r, int color);
 void	draw_circle_bresenham(t_img *img, t_point c, int r, int color);
 void	draw_circle_on_img(t_img *img, t_point c, int r, int color);
 
-void	draw_circle_stroke(t_img *img, t_point c, int r, int thickness, int color);
+void	draw_circle_stroke(t_img *img, t_point center, int r_outer, int r_inner, int color);
+void	draw_circle_stroke_soft(t_img *img, t_point c, int r, int thickness, int color);
+void	draw_circle_stroke_v2(t_img *img, t_point center, int r_outer, int r_inner, int color);
+void	draw_circle_stroke_v3(t_img *img, t_point c, int r, int thickness, int color);
+void	draw_circle_stroke_v4(t_img *img, t_point c, int r, int thickness, int color);
+void	draw_circle_stroke_v5(t_img *img, t_point c, int r, int thickness, int color);
+void	draw_circle_stroke_v6(t_img *img, t_point c, int r, int thickness, int color);
 void	draw_circle_filled(t_img *img, t_point c, int r, int color);
 void	draw_ring(t_img *img, t_point c, int r_outer, int r_inner, int color);
 void	draw_ring_segment(t_img *img, t_point c, int r_outer, int r_inner,
@@ -196,5 +205,7 @@ void	draw_ring_segment2(t_img *img, t_point c, int r_outer, int r_inner,
 void	draw_ring_segment3(t_img *img, t_point c, int r_outer, int r_inner,
 						double angle_start, double angle_end, int color);
 void	draw_ring_segment4(t_img *img,  t_point c, int r_outer, int r_inner,
+						double angle_start, double angle_end, int color);
+void	draw_ring_segment5(t_img *img,  t_point c, int r_outer, int r_inner,
 						double angle_start, double angle_end, int color);
 #endif //MLX_TEST_H

@@ -157,8 +157,8 @@ int mouse_move(int x, int y, void *param)
 		normalize_angles(&angle_start, &angle_end); // Normalize angles to [0, 2π)
 
 //		draw_ring_segment2(app->player.src2, center, R_OUTER, R_INNER, angle_start, angle_end, app->default_color);
-		draw_ring_segment(app->player.src2, center, R_OUTER, R_INNER, angle_start, angle_end, app->default_color);
-//		draw_ring_segment4(app->player.src2, center, R_OUTER, R_INNER, angle_start, angle_end, app->default_color);
+//		draw_ring_segment(app->player.src2, center, R_OUTER, R_INNER, angle_start, angle_end, app->default_color);
+		draw_ring_segment5(app->player.src2, center, R_OUTER, R_INNER, angle_start, angle_end, app->default_color);
 
 
 		app->player.angle_rad = angle_rad;
@@ -319,12 +319,8 @@ int main(void)
 
 
 	t_point center = (t_point){.x = dst->width / 2, .y = dst->height / 2 };
-//	draw_circle_stroke(dst, center, 42, 5, app->default_color);
-//	draw_circle_filled(dst, center, 3, app->default_color);
-
-	i = 5;
-	while (--i)
-		draw_circle_bresenham(dst, center, i, app->default_color);
+	draw_circle_stroke_v6(dst, center, 175, 40, app->default_color);
+	draw_circle_filled(dst, center, 40, app->default_color);
 
 //	draw_ring(dst, center, 42, 35, app->default_color);
 //	draw_circle_filled(dst, center, 42, app->default_color);
@@ -340,8 +336,8 @@ int main(void)
 	normalize_angles(&angle_start, &angle_end); // Normalize angles to [0, 2π)
 
 //	draw_ring_segment2(dst2, center, R_OUTER, R_INNER, angle_start, angle_end, app->default_color);
-	draw_ring_segment(dst2, center, R_OUTER, R_INNER, angle_start, angle_end, app->default_color);
-//	draw_ring_segment4(dst2, center, R_OUTER, R_INNER, angle_start, angle_end, app->default_color);
+//	draw_ring_segment(dst2, center, R_OUTER, R_INNER, angle_start, angle_end, app->default_color);
+	draw_ring_segment5(dst2, center, R_OUTER, R_INNER, angle_start, angle_end, app->default_color);
 
 	app->player.src2 = dst2;
 	app->player.avatar = img_dup(app, app->player.src);
