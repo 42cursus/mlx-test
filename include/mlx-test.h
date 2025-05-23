@@ -17,6 +17,7 @@
 # include <X11/keysym.h>
 # include <sys/time.h>
 # include <mlx.h>
+# include <math.h>
 
 # define WIN_HEIGHT 480
 # define WIN_WIDTH 720
@@ -24,10 +25,23 @@
 # define MLX_GREEN 0x0000ff00
 # define MLX_BLUE 0x000000ff
 # define MLX_WHITE 0x00ffffff
+# define MLX_LIGHT_SLATE_GREY 0x00778899
+# define MLX_LIGHT_SLATE_BLUE 0x008470ff
+# define MLX_DARK_SLATE 0x2f4f4f
 # define XPM_TRANSPARENT 0xff000000
 # define MLX_TRANSPARENT 0x00000042
 # define MLX_DTURQUOISE 0x0000ddcc
 # define MLX_TANG_YELLOW 0x00ffcc00
+
+
+// Normalize angles to [0, 2π)
+static inline double normalize_angle(double angle)
+{
+	angle = fmod(angle, 2 * M_PI);
+	if (angle < 0)
+		angle += 2 * M_PI;
+	return (angle);
+}
 
 typedef struct s_colour
 {
@@ -180,7 +194,6 @@ void	rotate_arbitrary_blit(t_img *dst, t_img *src, double angle_rad);
 t_ivec	get_rotated_bounds(int w, int h, float angle);
 
 u_int	interpolate_colour(t_colour *col1, t_colour *col2);
-int		interpolate_colour2(int col1, int col2);
 void	put_pixel_alpha(t_img *img, t_point p, int base_color, double alpha_frac);
 void	put_pixel_alpha2(t_img *img, t_point p, int base_color, double alpha_frac);
 void	put_pixel_alpha_blend(t_img *img, t_point p, int base_color, double alpha_frac);

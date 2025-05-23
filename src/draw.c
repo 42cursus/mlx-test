@@ -13,35 +13,35 @@
 #include <math.h>
 #include "mlx-test.h"
 
-u_int	interpolate_colour(t_colour *col1, t_colour *col2)
+static inline t_colour blend_colour(t_colour src, t_colour dst)
 {
-	int	r;
-	int	g;
-	int	b;
+	t_colour out;
 
-	if (col1->raw == col2->raw)
-		return col2->raw;
+	u_int src_a = src.a;            // 0–255
+	u_int inv_a = 255 - src_a;      // inverse alpha
 
-	const double frac = col1->a / 255.0;
-	r = ((col2->r - col1->r) * frac) + col1->r;
-	g = ((col2->g - col1->g) * frac) + col1->g;
-	b = ((col2->b - col1->b) * frac) + col1->b;
-	return ((t_colour){.r = r, .g = g, .b = b}).raw;
+	// Blend each channel
+	out.r = (u_char)((src.r * src_a + dst.r * inv_a) / 255);
+	out.g = (u_char)((src.g * src_a + dst.g * inv_a) / 255);
+	out.b = (u_char)((src.b * src_a + dst.b * inv_a) / 255);
+
+	// Optional: blend alpha channel too
+	out.a = (u_char)(src_a + (dst.a * inv_a) / 255);
+
+	return out;
 }
 
-int	interpolate_colour2(int col1, int col2)
+u_int	interpolate_colour(t_colour *col1, t_colour *col2)
 {
-	int	r;
-	int	g;
-	int	b;
+	t_colour		out;
+	const double	frac = col1->a / 255.0;
 
-	if (col1 == col2)
-		return (col1);
-	const double frac = (col1 & XPM_TRANSPARENT) / 255.0;
-	r = ((col2 & MLX_RED) - (col1 & MLX_RED)) * frac + (col1 & MLX_RED);
-	g = ((col2 & MLX_GREEN) - (col1 & MLX_GREEN)) * frac + (col1 & MLX_GREEN);
-	b = ((col2 & MLX_BLUE) - (col1 & MLX_BLUE)) * frac + (col1 & MLX_BLUE);
-	return ((r & MLX_RED) + (g & MLX_GREEN) + b);
+	if (col1->raw == col2->raw)
+		return col1->raw;
+	out.r = ((col2->r - col1->r) * frac) + col1->r + 0.5;
+	out.g = ((col2->g - col1->g) * frac) + col1->g + 0.5;
+	out.b = ((col2->b - col1->b) * frac) + col1->b + 0.5;
+	return (out.raw);
 }
 
 void	put_pixel_alpha_blend(t_img *img, t_point p, int base_color, double alpha_frac)
@@ -592,8 +592,8 @@ void	draw_circle_filled(t_img *img, t_point c, int r, int color)
 			if (dist <= r - 1.0)
 				put_pixel_alpha(img, cc, color, 0); // full opacity
 			else if (dist <= r)
-				put_pixel_alpha(img, cc, color, 1 - frac);
-			// fade out
+				put_pixel_alpha(img, cc, color, 1 - frac); // fade out
+
 		}
 	}
 }
@@ -739,7 +739,9 @@ void draw_ring_segment2(t_img *img, t_point c, int r_outer, int r_inner,
 void draw_ring_segment3(t_img *img, t_point c, int r_outer, int r_inner,
 					   double angle_start, double angle_end, int color)
 {
-	normalize_angles(&angle_start, &angle_end); // Normalize angles to [0, 2π)
+	angle_start = normalize_angle(angle_start);
+	angle_end = normalize_angle(angle_end);
+
 	for (int y = -r_outer - 1; y <= r_outer + 1; ++y)
 	{
 		for (int x = -r_outer - 1; x <= r_outer + 1; ++x)
@@ -791,8 +793,8 @@ void draw_ring_segment3(t_img *img, t_point c, int r_outer, int r_inner,
 void draw_ring_segment4(t_img *img,  t_point c, int r_outer, int r_inner,
 					   double angle_start, double angle_end, int color)
 {
-	normalize_angles(&angle_start, &angle_end); // Normalize angles to [0, 2π)
-
+	angle_start = normalize_angle(angle_start);
+	angle_end = normalize_angle(angle_end);
 	for (int y = -r_outer - 1; y <= r_outer + 1; ++y)
 	{
 		for (int x = -r_outer - 1; x <= r_outer + 1; ++x)

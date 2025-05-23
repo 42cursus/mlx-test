@@ -68,7 +68,7 @@ int	exit_win(t_info *const	app)
 
 void redraw_img(t_info *const app)
 {
-	fill_with_colour(app->canvas, MLX_TANG_YELLOW, MLX_DTURQUOISE);
+	fill_with_colour(app->canvas, MLX_TANG_YELLOW, MLX_LIGHT_SLATE_GREY);
 	pix_copy_safe(app->fish.avatar, app->canvas, app->fish.coord);
 	pix_copy_alpha(app->canvas, app->player.src2, app->player.coord);
 }
@@ -151,10 +151,8 @@ int mouse_move(int x, int y, void *param)
 //		rotate_img(app->player.src, app->player.avatar, angle_rad);
 		pix_dup(app->player.src, app->player.src2);
 
-		double angle_start = angle_rad - M_1_PI;
-		double angle_end = angle_rad + M_1_PI;
-
-		normalize_angles(&angle_start, &angle_end); // Normalize angles to [0, 2π)
+		double angle_start = normalize_angle(angle_rad - M_1_PI);
+		double angle_end = normalize_angle(angle_rad + M_1_PI);
 
 //		draw_ring_segment2(app->player.src2, center, R_OUTER, R_INNER, angle_start, angle_end, app->default_color);
 //		draw_ring_segment(app->player.src2, center, R_OUTER, R_INNER, angle_start, angle_end, app->default_color);
@@ -307,12 +305,13 @@ int main(void)
 	app->fr_delay = 1000000 / app->framerate;
 	app->fr_scale = (double)app->framerate / 50.0;
 	app->fish.avatar = mlx_xpm_file_to_image(app->mlx, (char *)"lib/minilibx-linux/test/open.xpm", &dummy.width, &dummy.height);
-	app->default_color = MLX_DTURQUOISE;
+
+	int	default_color = MLX_DTURQUOISE;
 	int i = -1;
 	while (mlx_col_name[++i].name)
 		if (!strcasecmp(mlx_col_name[i].name, "light slate"))
-			app->default_color = mlx_col_name[i].color;
-
+			default_color = mlx_col_name[i].color;
+	app->default_color = default_color;
 
 	t_img *dst = mlx_new_image(app->mlx, 400, 400);
 	fill_with_colour(dst, XPM_TRANSPARENT, XPM_TRANSPARENT);
@@ -330,10 +329,8 @@ int main(void)
 	t_img *dst2 = mlx_new_image(app->mlx, 400, 400);
 	pix_dup(dst, dst2);
 
-	double angle_start = app->player.angle_rad - M_1_PI;
-	double angle_end = app->player.angle_rad + M_1_PI;
-
-	normalize_angles(&angle_start, &angle_end); // Normalize angles to [0, 2π)
+	double angle_start = normalize_angle(app->player.angle_rad - M_1_PI);
+	double angle_end = normalize_angle(app->player.angle_rad + M_1_PI);
 
 //	draw_ring_segment2(dst2, center, R_OUTER, R_INNER, angle_start, angle_end, app->default_color);
 //	draw_ring_segment(dst2, center, R_OUTER, R_INNER, angle_start, angle_end, app->default_color);
