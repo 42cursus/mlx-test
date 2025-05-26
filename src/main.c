@@ -268,21 +268,23 @@ void fill_with_colour(t_img *img, int f_col, int c_col)
 	const int	mid = img->height / 2;
 	int			i;
 	int			j;
+	u_int		*pixels_row;
 
-	u_int (*pixels)[img->height][img->width] = (void *)img->data;
 	i = -1;
 	while (++i <= mid)
 	{
+		pixels_row = (void *) img->data + (img->width * i * sizeof(int));
 		j = -1;
 		while (++j < img->width)
-			(*pixels)[i][j] = c_col;
+			pixels_row[j] = c_col;
 	}
 	i--;
 	while (++i < img->height)
 	{
+		pixels_row = (void *)img->data + (img->width * i * sizeof(int));
 		j = -1;
 		while (++j < img->width)
-			(*pixels)[i][j] = f_col;
+			pixels_row[j] = f_col;
 	}
 }
 
