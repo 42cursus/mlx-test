@@ -10,7 +10,7 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <sysexits.h>
+
 #include <math.h>
 #include "mlx-test.h"
 
@@ -125,6 +125,8 @@ void	rotate_player(t_info *app, t_entity *player, int direction, double sensitiv
 	new_angle = atan2(player->dir.y, player->dir.x);
 	rotate_img(app->player.src, app->player.avatar, app->player.angle_rad - new_angle);
 	app->player.angle_rad = new_angle;
+	return ;
+	(void) sensitivity;
 }
 
 int mouse_move(int x, int y, void *param)
@@ -306,7 +308,9 @@ int main(void)
 	app->framerate = 100;
 	app->fr_delay = 1000000 / app->framerate;
 	app->fr_scale = (double)app->framerate / 50.0;
-	app->fish.avatar = mlx_xpm_file_to_image(app->mlx, (char *)"lib/minilibx-linux/test/open.xpm", &dummy.width, &dummy.height);
+//	app->fish.avatar = mlx_xpm_file_to_image(app->mlx, (char *)"lib/minilibx-linux/test/open.xpm", &dummy.width, &dummy.height);
+//	app->fish.avatar = mlx_xpm_to_image(app->mlx, (char *)"lib/minilibx-linux/test/open.xpm", &dummy.width, &dummy.height);
+	app->fish.avatar = mlx_xpm_to_image(app->mlx, (char **) open30_2_xpm, &dummy.width, &dummy.height);
 
 	int	default_color = MLX_DTURQUOISE;
 	int i = -1;

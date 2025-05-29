@@ -33,6 +33,7 @@
 # define MLX_DTURQUOISE 0x0000ddcc
 # define MLX_TANG_YELLOW 0x00ffcc00
 
+extern const char *open30_2_xpm[];
 
 // Normalize angles to [0, 2π)
 static inline double normalize_angle(double angle)

@@ -13,7 +13,7 @@
 #include <math.h>
 #include "mlx-test.h"
 
-static inline t_colour blend_colour(t_colour src, t_colour dst)
+__attribute__((unused)) static inline t_colour blend_colour(t_colour src, t_colour dst)
 {
 	t_colour out;
 

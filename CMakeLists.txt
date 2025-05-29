@@ -11,8 +11,8 @@
 # **************************************************************************** #
 
 cmake_minimum_required(VERSION 3.8)
-#set(CMAKE_C_COMPILER clang)
-set(CMAKE_C_COMPILER gcc)
+set(CMAKE_C_COMPILER clang)
+#set(CMAKE_C_COMPILER gcc)
 
 project(mlx-test C)
 set(CMAKE_VERBOSE_MAKEFILE ON)
@@ -81,6 +81,31 @@ set_target_properties(${MLX_LIB_NAME} PROPERTIES
 
 #==============================================================================#
 
+#==============================================================================#
+# Textures lib
+#==============================================================================#
+
+set(TEX_LIB_NAME libtextures)
+add_library(${TEX_LIB_NAME} STATIC)
+
+file(GLOB TEX_LIB_SOURCES "${PROJECT_SOURCE_DIR}/textures/*.xpm")
+set_source_files_properties(${TEX_LIB_SOURCES}
+        PROPERTIES
+        LANGUAGE C
+        COMPILE_OPTIONS -xc
+)
+target_sources(${TEX_LIB_NAME}
+        PRIVATE
+        ${TEX_LIB_SOURCES}
+)
+target_compile_definitions(${TEX_LIB_NAME} PRIVATE static=)
+target_link_options(${TEX_LIB_NAME} PRIVATE ${TARGET_LINK_FLAGS})
+set_target_properties(${TEX_LIB_NAME} PROPERTIES
+        LINKER_LANGUAGE C
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/")
+
+#==============================================================================#
+
 file(GLOB_RECURSE TARGET_HEADERS "src/*.h")
 file(GLOB_RECURSE TARGET_SOURCES "src/*.c")
 
@@ -100,6 +125,7 @@ set(TARGET_LIBRARIES
         ${MLX_LIB_NAME}
         ${MATH_LIB}
         ${FT_LIB_NAME}
+        ${TEX_LIB_NAME}
         Threads::Threads
         ${X11_LIBRARIES}
         ${XT_LIBRARY}
@@ -112,7 +138,19 @@ set(TARGET_LIBRARIES
 
 add_executable(${TARGET_NAME}
         ${TARGET_HEADERS}
-        ${TARGET_SOURCES})
+        ${TARGET_SOURCES}
+)
+
+SET_SOURCE_FILES_PROPERTIES("${PROJECT_SOURCE_DIR}/lib/minilibx-linux/test/open.xpm" PROPERTIES
+        LANGUAGE C
+        COMPILE_FLAGS "-x c"
+)
+
+
+set_source_files_properties("src/main.c" PROPERTIES
+        INCLUDE_DIRECTORIES "${PROJECT_SOURCE_DIR}/lib/minilibx-linux/test"
+)
+
 
 target_include_directories(${TARGET_NAME} PRIVATE
         ${PROJECT_SOURCE_DIR}
@@ -120,7 +158,10 @@ target_include_directories(${TARGET_NAME} PRIVATE
         /usr/include/x86_64-linux-gnu)
 
 target_link_libraries(${TARGET_NAME} "${TARGET_LIBRARIES}")
-target_link_options(${TARGET_NAME} PRIVATE ${COMMON_LDFLAGS})
+target_link_options(${TARGET_NAME} PRIVATE
+        -Wl,--wrap=strlcpy_is_not_posix
+        ${COMMON_LDFLAGS}
+)
 target_compile_options(${TARGET_NAME} PRIVATE "${FT_CFLAGS}")
 target_compile_definitions(${TARGET_NAME} PRIVATE DEBUG)
 set_target_properties(${TARGET_NAME} PROPERTIES
