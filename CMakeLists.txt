@@ -121,10 +121,17 @@ find_library(XM_LIBRARY Xm REQUIRED)
 find_library(MRM_LIBRARY Mrm REQUIRED)
 find_library(XPM_LIBRARY Xpm REQUIRED)
 
+# https://stackoverflow.com/questions/29191855/what-is-the-proper-way-to-use-pkg-config-from-cmake
+# https://cmake.org/cmake/help/latest/module/FindPkgConfig.html
+pkg_check_modules(FREETYPE2 REQUIRED IMPORTED_TARGET freetype2)
+pkg_check_modules(SDL2 REQUIRED sdl2)
+
 set(TARGET_LIBRARIES
         ${MLX_LIB_NAME}
         ${MATH_LIB}
         ${FT_LIB_NAME}
+        ${SDL2_LIBRARIES}
+        ${FREETYPE2_LIBRARIES}
         ${TEX_LIB_NAME}
         Threads::Threads
         ${X11_LIBRARIES}
@@ -154,6 +161,8 @@ set_source_files_properties("src/main.c" PROPERTIES
 
 target_include_directories(${TARGET_NAME} PRIVATE
         ${PROJECT_SOURCE_DIR}
+        ${FREETYPE2_INCLUDE_DIRS}
+        ${SDL2_INCLUDE_DIRS}
         /usr/include
         /usr/include/x86_64-linux-gnu)
 
@@ -162,7 +171,13 @@ target_link_options(${TARGET_NAME} PRIVATE
         -Wl,--wrap=strlcpy_is_not_posix
         ${COMMON_LDFLAGS}
 )
-target_compile_options(${TARGET_NAME} PRIVATE "${FT_CFLAGS}")
+target_compile_options(${TARGET_NAME}
+        PRIVATE "${FT_CFLAGS}"
+        PUBLIC
+            ${SDL2_CFLAGS_OTHER}
+            ${FREETYPE2_CFLAGS_OTHER}
+
+)
 target_compile_definitions(${TARGET_NAME} PRIVATE DEBUG)
 set_target_properties(${TARGET_NAME} PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}"

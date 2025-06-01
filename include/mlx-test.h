@@ -19,6 +19,9 @@
 # include <mlx.h>
 # include <math.h>
 
+# include <ft2build.h>
+# include FT_FREETYPE_H
+
 # define WIN_HEIGHT 480
 # define WIN_WIDTH 720
 # define MLX_RED 0x00ff0000
@@ -136,6 +139,7 @@ typedef struct s_info
 	int			fullscreen;
 	char 		*title;
 	t_img		*canvas;
+	t_img		*minimap;
 	t_entity	player;
 	t_entity	fish;
 	int			default_color;
@@ -146,6 +150,7 @@ typedef struct s_info
 	size_t		framerate;
 	double		fr_scale;
 	int			sensitivity;
+	int			show_mmap;
 }	t_info;
 
 typedef struct s_col_name t_col_name;
@@ -158,6 +163,7 @@ int		render(void *param);
 size_t	get_time_us(void);
 void	on_expose(t_info *app);
 int		key_press(KeySym key, void *param);
+int		key_release(KeySym key, void *param);
 
 int		mouse_move(int x, int y, void *param);
 int		mouse_press(unsigned int button, int x, int y, void *param);

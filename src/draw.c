@@ -87,7 +87,6 @@ static void	put_pixel_alpha_alt(t_img *img, t_point p, int base_color, double al
 	put_pixel_alpha(img, p, base_color, alpha_frac);
 }
 
-
 void	put_pixel_alpha_add(t_img *img, t_point p, int base_color, double alpha_frac)
 {
 	int 				alpha;

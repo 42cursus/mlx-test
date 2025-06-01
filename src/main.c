@@ -66,11 +66,66 @@ int	exit_win(t_info *const	app)
 	return (0);
 }
 
+void draw_text_antialiased(t_img *img, const char *text, t_point c, const char *font_path, int size);
+void draw_text_antialiased(t_img *img, const char *text, t_point c, const char *font_path, int size)
+{
+	int		col;
+	int		row;
+	t_point	p;
+
+	FT_Library ft;
+	if (FT_Init_FreeType(&ft))
+		return;
+
+	FT_Face face;
+	if (FT_New_Face(ft, font_path, 0, &face))
+		return;
+
+	FT_Set_Pixel_Sizes(face, 0, size);
+
+	int pen_x = c.x;
+	const char *str = text;
+	while(*str)
+	{
+		if (FT_Load_Char(face, *str, FT_LOAD_RENDER))
+			continue;
+		FT_Bitmap *bmp = &face->glyph->bitmap;
+		unsigned char *buffer = bmp->buffer;
+
+		row = -1;
+		while (++row < (int)bmp->rows)
+		{
+			col = -1;
+			while (++col < (int)bmp->width)
+			{
+				unsigned char value = buffer[row * bmp->pitch + col];
+//				float alpha = 1.0f - value / 255.0f; // your alpha convention may vary
+				float alpha = 1.0f - value / 255.0f; // your alpha convention may vary
+
+				p.x = pen_x + face->glyph->bitmap_left + col;
+				p.y = c.y - face->glyph->bitmap_top + row;
+
+				if (alpha != 1)
+					put_pixel_alpha(img, p, 0xCCFFFF, alpha);
+			}
+		}
+		pen_x += face->glyph->advance.x >> 6;
+		str++;
+	}
+
+	FT_Done_Face(face);
+	FT_Done_FreeType(ft);
+}
+
 void redraw_img(t_info *const app)
 {
 	fill_with_colour(app->canvas, MLX_TANG_YELLOW, MLX_LIGHT_SLATE_GREY);
 	pix_copy_safe(app->fish.avatar, app->canvas, app->fish.coord);
 	pix_copy_alpha(app->canvas, app->player.src2, app->player.coord);
+
+	if (app->show_mmap)
+		pix_copy_alpha(app->canvas, app->minimap, (t_point){.x = WIN_WIDTH * 0.15, .y = WIN_HEIGHT * 0.15});
+
 }
 
 void apply_transform(t_info *const app, t_img *img, t_ivec new_dir,
@@ -196,6 +251,15 @@ int mouse_press(unsigned int button, int x, int y, void *param)
 	((void) x, (void) y);
 }
 
+int key_release(KeySym key, void *param)
+{
+	t_info *const app = param;
+
+	if (key == XK_Shift_L)
+		app->show_mmap = 0;
+	return (0);
+}
+
 int key_press(KeySym key, void *param)
 {
 	t_info *const app = param;
@@ -206,6 +270,8 @@ int key_press(KeySym key, void *param)
 		toggle_fullscreen(app);
 		mlx_do_sync(app->mlx);
 	}
+	else if (key == XK_Shift_L)
+		app->show_mmap = 1;
 	else if (key == XK_Escape)
 		app->mlx->end_loop = 1;
 	else if (key == XK_Left || key == XK_Right || key == XK_Up || key == XK_Down)
@@ -305,6 +371,16 @@ int main(void)
 
 	app->mlx = mlx_init();
 	app->canvas = mlx_new_image(app->mlx, WIN_WIDTH, WIN_HEIGHT);
+	app->minimap = mlx_new_image(app->mlx, WIN_WIDTH * 0.7, WIN_HEIGHT * 0.7);
+
+	fill_with_colour(app->minimap, 0xC0000000, 0xC0000000);
+
+
+	// fc-list | grep -i "dejavu"
+	t_point c = {10, 100};
+	const char *font = "/usr/share/fonts/truetype/ubuntu/UbuntuMono-R.ttf";
+	draw_text_antialiased(app->minimap, "Hey Ho!", c, font, 50);
+
 	app->framerate = 100;
 	app->fr_delay = 1000000 / app->framerate;
 	app->fr_scale = (double)app->framerate / 50.0;
@@ -356,6 +432,7 @@ int main(void)
 
 	mlx_hook(app->win, DestroyNotify, 0, (void *)&exit_win, app);
 	mlx_hook(app->win, KeyPress, KeyPressMask, (void *) &key_press, app);
+	mlx_hook(app->win, KeyRelease, KeyReleaseMask, (void *) &key_release, app);
 	mlx_hook(app->win, ButtonPress, ButtonPressMask, (void *) &mouse_press, app);
 	mlx_hook(app->win, MotionNotify, PointerMotionMask, (void *) &mouse_move, app);
 	mlx_loop_hook(app->mlx, &render, app);
