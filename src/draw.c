@@ -11,6 +11,8 @@
 /* ************************************************************************** */
 
 #include <math.h>
+#include <emmintrin.h>
+#include <sys/param.h>
 #include "mlx-test.h"
 
 __attribute__((unused)) static inline t_colour blend_colour(t_colour src, t_colour dst)
@@ -67,6 +69,7 @@ void	put_pixel_alpha_blend(t_img *img, t_point p, int base_color, double alpha_f
 
 
 void	put_pixel_alpha(t_img *img, t_point p, int base_color, double alpha_frac)
+void	put_pixel_alpha(t_img *img, t_point p, int base_color, double alpha_frac)
 {
 	if (p.x < 0 || p.y < 0 || p.x >= img->width || p.y >= img->height)
 		return;
@@ -82,9 +85,65 @@ void	put_pixel_alpha(t_img *img, t_point p, int base_color, double alpha_frac)
 	*dst = (alpha << 24) | (base_color & MLX_WHITE);
 }
 
-static void	put_pixel_alpha_alt(t_img *img, t_point p, int base_color, double alpha_frac)
+static inline __m128i pack_color(__m128 r, __m128 g, __m128 b, __m128 a)
 {
-	put_pixel_alpha(img, p, base_color, alpha_frac);
+	__m128i ri = _mm_cvtps_epi32(r);
+	__m128i gi = _mm_cvtps_epi32(g);
+	__m128i bi = _mm_cvtps_epi32(b);
+	__m128i ai = _mm_cvtps_epi32(a);
+
+	__m128i rb = _mm_or_si128(ri, _mm_slli_epi32(gi, 8));
+	__m128i ga = _mm_or_si128(_mm_slli_epi32(bi, 16), _mm_slli_epi32(ai, 24));
+	return _mm_or_si128(rb, ga);
+}
+
+//__attribute__((optnone))
+static void place_tile_on_image32_alpha(t_img *image, t_img *tile, t_point p)
+{
+	t_point		it;
+	t_point		offset;
+	t_point		boundaries;
+
+	offset.x = (int[]){0, -p.x}[p.x < 0];
+	offset.y = (int[]){0, -p.y}[p.y < 0];
+
+	boundaries.x = MIN(tile->width, image->width - p.x);
+	boundaries.y = MIN(tile->height, image->height - p.y);
+	it.y = offset.y - 1;
+
+	while (++it.y < boundaries.y)
+	{
+		u_int32_t *src_row = (u_int32_t *)tile->data + (it.y * tile->width);
+		u_int32_t *dst_row = (u_int32_t *)image->data + ((it.y + p.y) * image->width) + p.x;
+		it.x = offset.x - 1;
+
+		while (++it.x < boundaries.x)
+		{
+			t_colour src = *(t_colour *)&src_row[it.x];
+			t_colour dst = *(t_colour *)&dst_row[it.x];
+
+//			if (src.a == 255 || src.raw == dst.raw)
+//				continue;
+
+			// Load into SIMD vectors
+			__m128 src_v = _mm_set_ps(src.a, src.r, src.g, src.b);
+			__m128 dst_v = _mm_set_ps(dst.a, dst.r, dst.g, dst.b);
+
+			// Normalize alpha
+			__m128 alpha = _mm_set1_ps(src.a / 255.0f);
+
+			// Blend each channel
+			__m128 out = _mm_add_ps(src_v, _mm_mul_ps(_mm_sub_ps(dst_v, src_v), alpha));
+
+			// Store result
+			dst_row[it.x] = _mm_cvtsi128_si32(pack_color(
+				_mm_shuffle_ps(out, out, _MM_SHUFFLE(0, 0, 0, 0)),	// A
+				_mm_shuffle_ps(out, out, _MM_SHUFFLE(1, 1, 1, 1)),	// R
+				_mm_shuffle_ps(out, out, _MM_SHUFFLE(2, 2, 2, 2)),	// G
+				_mm_shuffle_ps(out, out, _MM_SHUFFLE(3, 3, 3, 3))	// B
+			));
+		}
+	}
 }
 
 void	put_pixel_alpha_add(t_img *img, t_point p, int base_color, double alpha_frac)

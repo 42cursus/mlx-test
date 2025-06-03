@@ -161,8 +161,8 @@ set_source_files_properties("src/main.c" PROPERTIES
 
 target_include_directories(${TARGET_NAME} PRIVATE
         ${PROJECT_SOURCE_DIR}
-        ${FREETYPE2_INCLUDE_DIRS}
         ${SDL2_INCLUDE_DIRS}
+        ${FREETYPE2_INCLUDE_DIRS}
         /usr/include
         /usr/include/x86_64-linux-gnu)
 
