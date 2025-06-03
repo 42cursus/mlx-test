@@ -111,6 +111,7 @@ static void place_tile_on_image32_alpha(t_img *image, t_img *tile, t_point p)
 	boundaries.y = MIN(tile->height, image->height - p.y);
 	it.y = offset.y - 1;
 
+#pragma clang loop unroll(disable)
 	while (++it.y < boundaries.y)
 	{
 		u_int32_t *src_row = (u_int32_t *)tile->data + (it.y * tile->width);
