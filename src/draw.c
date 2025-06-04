@@ -68,7 +68,7 @@ void	put_pixel_alpha_blend(t_img *img, t_point p, int base_color, double alpha_f
 }
 
 
-void	put_pixel_alpha(t_img *img, t_point p, int base_color, double alpha_frac)
+void	put_pixel_alpha(t_img *img, t_point p, int base_color, double alpha_frac);
 void	put_pixel_alpha(t_img *img, t_point p, int base_color, double alpha_frac)
 {
 	if (p.x < 0 || p.y < 0 || p.x >= img->width || p.y >= img->height)
@@ -97,7 +97,7 @@ static inline __m128i pack_color(__m128 r, __m128 g, __m128 b, __m128 a)
 	return _mm_or_si128(rb, ga);
 }
 
-//__attribute__((optnone))
+__attribute__((optnone, used))
 static void place_tile_on_image32_alpha(t_img *image, t_img *tile, t_point p)
 {
 	t_point		it;
@@ -146,6 +146,352 @@ static void place_tile_on_image32_alpha(t_img *image, t_img *tile, t_point p)
 		}
 	}
 }
+__attribute__((optnone, used))
+static inline __m128i blend_4pixels2(__m128i src, __m128i dst)
+{
+	__m128i zero = _mm_setzero_si128();
+
+	// Unpack 8-bit to 16-bit
+	__m128i src_lo = _mm_unpacklo_epi8(src, zero); // [B0 G0 R0 A0][B1 G1 R1 A1]
+	__m128i src_hi = _mm_unpackhi_epi8(src, zero); // [B2 G2 R2 A2][B3 G3 R3 A3]
+	__m128i dst_lo = _mm_unpacklo_epi8(dst, zero);
+	__m128i dst_hi = _mm_unpackhi_epi8(dst, zero);
+
+	// Interleave src channels into 4 parallel float vectors
+	__m128i src_bi = _mm_setr_epi32(
+		_mm_extract_epi16(src_lo, 0),
+		_mm_extract_epi16(src_lo, 4),
+		_mm_extract_epi16(src_hi, 0),
+		_mm_extract_epi16(src_hi, 4)
+	);
+	__m128i src_gi = _mm_setr_epi32(
+		_mm_extract_epi16(src_lo, 1),
+		_mm_extract_epi16(src_lo, 5),
+		_mm_extract_epi16(src_hi, 1),
+		_mm_extract_epi16(src_hi, 5)
+	);
+	__m128i src_ri = _mm_setr_epi32(
+		_mm_extract_epi16(src_lo, 2),
+		_mm_extract_epi16(src_lo, 6),
+		_mm_extract_epi16(src_hi, 2),
+		_mm_extract_epi16(src_hi, 6)
+	);
+	__m128i src_ai = _mm_setr_epi32(
+		_mm_extract_epi16(src_lo, 3),
+		_mm_extract_epi16(src_lo, 7),
+		_mm_extract_epi16(src_hi, 3),
+		_mm_extract_epi16(src_hi, 7)
+	);
+
+	__m128 src_b = _mm_cvtepi32_ps(src_bi);
+	__m128 src_g = _mm_cvtepi32_ps(src_gi);
+	__m128 src_r = _mm_cvtepi32_ps(src_ri);
+	__m128 src_a = _mm_cvtepi32_ps(src_ai);
+
+	// Repeat for dst
+	__m128i dst_bi = _mm_setr_epi32(
+		_mm_extract_epi16(dst_lo, 0),
+		_mm_extract_epi16(dst_lo, 4),
+		_mm_extract_epi16(dst_hi, 0),
+		_mm_extract_epi16(dst_hi, 4)
+	);
+	__m128i dst_gi = _mm_setr_epi32(
+		_mm_extract_epi16(dst_lo, 1),
+		_mm_extract_epi16(dst_lo, 5),
+		_mm_extract_epi16(dst_hi, 1),
+		_mm_extract_epi16(dst_hi, 5)
+	);
+	__m128i dst_ri = _mm_setr_epi32(
+		_mm_extract_epi16(dst_lo, 2),
+		_mm_extract_epi16(dst_lo, 6),
+		_mm_extract_epi16(dst_hi, 2),
+		_mm_extract_epi16(dst_hi, 6)
+	);
+
+	__m128 dst_b = _mm_cvtepi32_ps(dst_bi);
+	__m128 dst_g = _mm_cvtepi32_ps(dst_gi);
+	__m128 dst_r = _mm_cvtepi32_ps(dst_ri);
+
+	// Normalize alpha
+	__m128 alpha = _mm_div_ps(src_a, _mm_set1_ps(255.0f));
+	__m128 opacity = _mm_sub_ps(_mm_set1_ps(1.0f), alpha);
+
+	// Blend
+	__m128 out_b = _mm_add_ps(src_b, _mm_mul_ps(_mm_sub_ps(dst_b, src_b), opacity));
+	__m128 out_g = _mm_add_ps(src_g, _mm_mul_ps(_mm_sub_ps(dst_g, src_g), opacity));
+	__m128 out_r = _mm_add_ps(src_r, _mm_mul_ps(_mm_sub_ps(dst_r, src_r), opacity));
+
+	// Convert to integers
+	__m128i out_bi = _mm_cvtps_epi32(out_b);
+	__m128i out_gi = _mm_cvtps_epi32(out_g);
+	__m128i out_ri = _mm_cvtps_epi32(out_r);
+	__m128i out_ai = _mm_cvtps_epi32(src_a); // keep original alpha
+
+	// Pack into 8-bit BGRA
+	__m128i bg = _mm_or_si128(out_bi, _mm_slli_epi32(out_gi, 8));
+	__m128i ra = _mm_or_si128(out_ri, _mm_slli_epi32(out_ai, 8));
+	__m128i bgralo = _mm_or_si128(bg, _mm_slli_epi32(ra, 16));
+
+	return bgralo;
+}
+
+// Blend src and dst using per-channel alpha
+__attribute__((optnone, used))
+static inline __m128i blend_4pixels(__m128i src, __m128i dst)
+{
+	__m128i zero = _mm_setzero_si128();
+
+	// Unpack bytes to 16-bit integers: [B G R A] × 4
+	__m128i src_lo = _mm_unpacklo_epi8(src, zero); // pixels 0 and 1
+	__m128i src_hi = _mm_unpackhi_epi8(src, zero); // pixels 2 and 3
+	__m128i dst_lo = _mm_unpacklo_epi8(dst, zero);
+	__m128i dst_hi = _mm_unpackhi_epi8(dst, zero);
+
+	// Unpack 16-bit to 32-bit per channel
+	__m128i s0 = _mm_unpacklo_epi16(src_lo, zero); // pixel 0: B0 G0 R0 A0
+	__m128i s1 = _mm_unpackhi_epi16(src_lo, zero); // pixel 1: B1 G1 R1 A1
+	__m128i s2 = _mm_unpacklo_epi16(src_hi, zero); // pixel 2: B2 G2 R2 A2
+	__m128i s3 = _mm_unpackhi_epi16(src_hi, zero); // pixel 3: B3 G3 R3 A3
+
+	__m128i d0 = _mm_unpacklo_epi16(dst_lo, zero);
+	__m128i d1 = _mm_unpackhi_epi16(dst_lo, zero);
+	__m128i d2 = _mm_unpacklo_epi16(dst_hi, zero);
+	__m128i d3 = _mm_unpackhi_epi16(dst_hi, zero);
+
+	// Convert to float
+	__m128 fs0 = _mm_cvtepi32_ps(s0);
+	__m128 fs1 = _mm_cvtepi32_ps(s1);
+	__m128 fs2 = _mm_cvtepi32_ps(s2);
+	__m128 fs3 = _mm_cvtepi32_ps(s3);
+
+	__m128 fd0 = _mm_cvtepi32_ps(d0);
+	__m128 fd1 = _mm_cvtepi32_ps(d1);
+	__m128 fd2 = _mm_cvtepi32_ps(d2);
+	__m128 fd3 = _mm_cvtepi32_ps(d3);
+
+	// Extract alpha from source
+	__m128 a0 = _mm_shuffle_ps(fs0, fs0, _MM_SHUFFLE(3, 3, 3, 3));
+	__m128 a1 = _mm_shuffle_ps(fs1, fs1, _MM_SHUFFLE(3, 3, 3, 3));
+	__m128 a2 = _mm_shuffle_ps(fs2, fs2, _MM_SHUFFLE(3, 3, 3, 3));
+	__m128 a3 = _mm_shuffle_ps(fs3, fs3, _MM_SHUFFLE(3, 3, 3, 3));
+
+	__m128 alpha0 = _mm_div_ps(a0, _mm_set1_ps(255.0f));
+	__m128 opacity0 = _mm_sub_ps(_mm_set1_ps(1.0f), alpha0);
+	__m128 alpha1 = _mm_div_ps(a1, _mm_set1_ps(255.0f));
+	__m128 opacity1 = _mm_sub_ps(_mm_set1_ps(1.0f), alpha1);
+	__m128 alpha2 = _mm_div_ps(a2, _mm_set1_ps(255.0f));
+	__m128 opacity2 = _mm_sub_ps(_mm_set1_ps(1.0f), alpha2);
+	__m128 alpha3 = _mm_div_ps(a3, _mm_set1_ps(255.0f));
+	__m128 opacity3 = _mm_sub_ps(_mm_set1_ps(1.0f), alpha3);
+
+	// out = src + (dst - src) * (1 - alpha)
+	fs0 = _mm_add_ps(fs0, _mm_mul_ps(_mm_sub_ps(fd0, fs0), _mm_sub_ps(_mm_set1_ps(1.0f), opacity0)));
+	fs1 = _mm_add_ps(fs1, _mm_mul_ps(_mm_sub_ps(fd1, fs1), _mm_sub_ps(_mm_set1_ps(1.0f), opacity1)));
+	fs2 = _mm_add_ps(fs2, _mm_mul_ps(_mm_sub_ps(fd2, fs2), _mm_sub_ps(_mm_set1_ps(1.0f), opacity2)));
+	fs3 = _mm_add_ps(fs3, _mm_mul_ps(_mm_sub_ps(fd3, fs3), _mm_sub_ps(_mm_set1_ps(1.0f), opacity3)));
+
+	// Convert back to int
+	__m128i i0 = _mm_cvtps_epi32(fs0);
+	__m128i i1 = _mm_cvtps_epi32(fs1);
+	__m128i i2 = _mm_cvtps_epi32(fs2);
+	__m128i i3 = _mm_cvtps_epi32(fs3);
+
+	// Pack 32-bit -> 16-bit
+	__m128i p01 = _mm_packs_epi32(i0, i1); // 2 pixels
+	__m128i p23 = _mm_packs_epi32(i2, i3); // 2 pixels
+
+	// Pack 16-bit -> 8-bit
+	__m128i result = _mm_packus_epi16(p01, p23); // 4 pixels packed in 16 bytes
+
+	return result;
+}
+/**
+ * Stage 1: Unpack 4 RGBA pixels into 4 __m128 float vectors
+ * @param pixels
+ * @return
+ */
+static inline __attribute__((always_inline, used))
+t_vec4	unpack_rgba_bytes_to_floats(__m128i pixels)
+{
+	t_vec4			out;
+	const __m128i	zero = _mm_setzero_si128();
+	const __m128i	lo = _mm_unpacklo_epi8(pixels, zero);
+	const __m128i	hi = _mm_unpackhi_epi8(pixels, zero);
+
+	out.r0 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(lo, zero));
+	out.r1 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(lo, zero));
+	out.r2 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(hi, zero));
+	out.r3 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(hi, zero));
+	return (out);
+}
+
+/**
+ * Stage 2: Extract normalized alpha (alpha / 255)
+ * @param s
+ * @return
+ */
+static inline __attribute__((always_inline, used))
+t_vec4	extract_normalized_alpha(t_vec4 s)
+{
+	t_vec4			alpha;
+	t_vec4			opacity;
+	const __m128	byte = _mm_set1_ps(255.0f);
+	const __m128	one = _mm_set1_ps(1.0f);
+
+	alpha.r0 = _mm_shuffle_ps(s.r0, s.r0, _MM_SHUFFLE(3, 3, 3, 3));
+	alpha.r1 = _mm_shuffle_ps(s.r1, s.r1, _MM_SHUFFLE(3, 3, 3, 3));
+	alpha.r2 = _mm_shuffle_ps(s.r2, s.r2, _MM_SHUFFLE(3, 3, 3, 3));
+	alpha.r3 = _mm_shuffle_ps(s.r3, s.r3, _MM_SHUFFLE(3, 3, 3, 3));
+
+	opacity.r0 = _mm_sub_ps(one, _mm_div_ps(alpha.r0, byte));
+	opacity.r1 = _mm_sub_ps(one, _mm_div_ps(alpha.r1, byte));
+	opacity.r2 = _mm_sub_ps(one, _mm_div_ps(alpha.r2, byte));
+	opacity.r3 = _mm_sub_ps(one, _mm_div_ps(alpha.r3, byte));
+
+	return opacity;
+}
+
+/**
+ * Stage 2.1: Extract opacity
+ * the alpha already represents opacity
+ * opacity = (255.0 - alpha_byte) / 255.0
+ * @param s
+ * @return
+ */
+static inline __attribute__((optnone, used))
+t_vec4	extract_opacity_from_inverted_alpha_old(t_vec4 s)
+{
+	t_vec4			opacity;
+	t_vec4			alpha;
+	const __m128	byte = _mm_set1_ps(255.0f);
+
+	alpha.r0 = _mm_shuffle_ps(s.r0, s.r0, _MM_SHUFFLE(3, 3, 3, 3));
+	alpha.r1 = _mm_shuffle_ps(s.r1, s.r1, _MM_SHUFFLE(3, 3, 3, 3));
+	alpha.r2 = _mm_shuffle_ps(s.r2, s.r2, _MM_SHUFFLE(3, 3, 3, 3));
+	alpha.r3 = _mm_shuffle_ps(s.r3, s.r3, _MM_SHUFFLE(3, 3, 3, 3));
+
+	opacity.r0 = _mm_div_ps(_mm_sub_ps(byte , alpha.r0), byte);
+	opacity.r1 = _mm_div_ps(_mm_sub_ps(byte, alpha.r1), byte);
+	opacity.r2 = _mm_div_ps(_mm_sub_ps(byte, alpha.r2), byte);
+	opacity.r3 = _mm_div_ps(_mm_sub_ps(byte, alpha.r3), byte);
+
+	return (opacity);
+}
+
+static inline __attribute__((always_inline, used))
+t_vec4	extract_opacity_from_inverted_alpha(t_vec4 s)
+{
+	t_vec4		out;
+	const float	inv255 = 255.0f;
+
+	__asm__ __volatile__ (
+		// Broadcast 255.0f into xmm0
+		"vbroadcastss %[inv], %%xmm0\n\t"
+
+		// Broadcast alpha components and compute: (255 - alpha) / 255
+		"vbroadcastss 12(%[src]), %%xmm1\n\t"   // s.r0[3] → xmm1
+		"vsubps %%xmm1, %%xmm0, %%xmm2\n\t"
+		"vdivps %%xmm0, %%xmm2, %%xmm2\n\t"
+		"vmovaps %%xmm2, 0(%[dst])\n\t"
+
+		"vbroadcastss 28(%[src]), %%xmm1\n\t"   // s.r1[3] → xmm1
+		"vsubps %%xmm1, %%xmm0, %%xmm2\n\t"
+		"vdivps %%xmm0, %%xmm2, %%xmm2\n\t"
+		"vmovaps %%xmm2, 16(%[dst])\n\t"
+
+		"vbroadcastss 44(%[src]), %%xmm1\n\t"   // s.r2[3] → xmm1
+		"vsubps %%xmm1, %%xmm0, %%xmm2\n\t"
+		"vdivps %%xmm0, %%xmm2, %%xmm2\n\t"
+		"vmovaps %%xmm2, 32(%[dst])\n\t"
+
+		"vbroadcastss 60(%[src]), %%xmm1\n\t"   // s.r3[3] → xmm1
+		"vsubps %%xmm1, %%xmm0, %%xmm2\n\t"
+		"vdivps %%xmm0, %%xmm2, %%xmm2\n\t"
+		"vmovaps %%xmm2, 48(%[dst])\n\t"
+		:
+		: [dst] "r" (&out), [src] "r" (&s), [inv] "m" (inv255)
+	: "xmm0", "xmm1", "xmm2", "memory"
+	);
+	return (out);
+}
+
+/**
+ * Stage 3: Blend pixel = src + (dst - src) * (1 - alpha)
+ * @param src
+ * @param dst
+ * @param alpha
+ * @return
+ */
+static inline __attribute__((always_inline, used))
+t_vec4	blend_pixels(t_vec4 src, t_vec4 dst, t_vec4 alpha) {
+	t_vec4	out;
+	__m128	one = _mm_set1_ps(1.0f);
+
+	out.r0 = _mm_add_ps(src.r0, _mm_mul_ps(_mm_sub_ps(dst.r0, src.r0), _mm_sub_ps(one, alpha.r0)));
+	out.r1 = _mm_add_ps(src.r1, _mm_mul_ps(_mm_sub_ps(dst.r1, src.r1), _mm_sub_ps(one, alpha.r1)));
+	out.r2 = _mm_add_ps(src.r2, _mm_mul_ps(_mm_sub_ps(dst.r2, src.r2), _mm_sub_ps(one, alpha.r2)));
+	out.r3 = _mm_add_ps(src.r3, _mm_mul_ps(_mm_sub_ps(dst.r3, src.r3), _mm_sub_ps(one, alpha.r3)));
+	return out;
+}
+
+/**
+ * Stage 4: Convert 4 float vectors to a packed 4-pixel __m128i
+ * @param blended
+ * @return
+ */
+static inline __attribute__((always_inline))
+__m128i	repack_floats_to_bytes(t_vec4 blended)
+{
+	__m128i i0 = _mm_cvtps_epi32(blended.r0);
+	__m128i i1 = _mm_cvtps_epi32(blended.r1);
+	__m128i i2 = _mm_cvtps_epi32(blended.r2);
+	__m128i i3 = _mm_cvtps_epi32(blended.r3);
+
+	__m128i p01 = _mm_packs_epi32(i0, i1);
+	__m128i p23 = _mm_packs_epi32(i2, i3);
+	return _mm_packus_epi16(p01, p23);
+}
+
+static inline __attribute__((always_inline, used))
+void	blend_4pixels3(u_int32_t *src, u_int32_t *dst)
+{
+	__m128i _src = _mm_loadu_si128((__m128i *) src);
+	__m128i _dst = _mm_loadu_si128((__m128i *) dst);
+
+	t_vec4 fs = unpack_rgba_bytes_to_floats(_src);
+	t_vec4 fd = unpack_rgba_bytes_to_floats(_dst);
+	t_vec4 opacity = extract_opacity_from_inverted_alpha(fs);
+	t_vec4 blended = blend_pixels(fs, fd, opacity);
+	_mm_storeu_si128((__m128i *) dst, repack_floats_to_bytes(blended));
+}
+
+void	place_tile_on_image32_alpha1(t_img *image, t_img *tile, t_point p);
+void	place_tile_on_image32_alpha1(t_img *image, t_img *tile, t_point p)
+{
+	t_point	it;
+	t_point	offset;
+	t_point	limit;
+	u_int	*src_row;
+	u_int	*dst_row;
+
+	offset.x = (int[]){0, -p.x}[p.x < 0];
+	offset.y = (int[]){0, -p.y}[p.y < 0];
+	limit.x = MIN(tile->width, image->width - p.x);
+	limit.y = MIN(tile->height, image->height - p.y);
+	it.y = offset.y - 1;
+	while (++it.y < limit.y)
+	{
+		src_row = (u_int32_t *) tile->data + it.y * tile->width;
+		dst_row = (u_int32_t *) image->data + (it.y + p.y) * image->width + p.x;
+		it.x = offset.x;
+		while (it.x + 3 < limit.x)
+		{
+			blend_4pixels3(src_row + it.x, dst_row + it.x);
+			it.x += 4;
+		}
+	}
+}
+
 
 void	put_pixel_alpha_add(t_img *img, t_point p, int base_color, double alpha_frac)
 {
@@ -562,6 +908,12 @@ void draw_circle_stroke_v5(t_img *img, t_point c, int r, int thickness, int colo
 		}
 	}
 }
+
+static void	put_pixel_alpha_alt(t_img *img, t_point p, int base_color, double alpha_frac)
+{
+	put_pixel_alpha(img, p, base_color, alpha_frac);
+}
+
 /**
  * draw_circle_stroke is meant to produce something that looks like tick marks
  * 	or stroke rings you'd find on the dial of a wristwatch — smooth,

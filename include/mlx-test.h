@@ -20,6 +20,7 @@
 # include <math.h>
 
 # include <ft2build.h>
+#include <emmintrin.h>
 # include FT_FREETYPE_H
 
 # define WIN_HEIGHT 480
@@ -37,6 +38,16 @@
 # define MLX_TANG_YELLOW 0x00ffcc00
 
 extern const char *open30_2_xpm[];
+
+
+typedef struct s_vec4
+{
+	__m128	r0;
+	__m128	r1;
+	__m128	r2;
+	__m128	r3;
+}	t_vec4;
+
 
 // Normalize angles to [0, 2π)
 static inline double normalize_angle(double angle)
