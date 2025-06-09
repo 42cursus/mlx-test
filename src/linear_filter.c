@@ -8,6 +8,9 @@
 /*   Created: 2025/06/07 17:23:22 by abelov            #+#    #+#             */
 /*   Updated: 2025/06/07 17:23:22 by abelov           ###   ########.fr       */
 /*                                                                            */
+#include <sys/param.h>
+#include <malloc.h>
+
 /* ************************************************************************** */
 
 
@@ -218,4 +221,101 @@ void	draw_credits_row(t_info *app, t_vect l_pos, t_vect r_pos, int row)
 		}
 		curr_x += step_x;
 	}
+}
+
+
+int	get_tile_idx(char **map, int i, int j)
+{
+	int	index;
+
+	index = 0;
+	/* Direct neighbors */
+	index += (map[i - 0][j - 1] - '0' != 0) << 0;
+	index += (map[i - 1][j + 0] - '0' != 0) << 1;
+	index += (map[i - 0][j + 1] - '0' != 0) << 2;
+	index += (map[i + 1][j + 0] - '0' != 0) << 3;
+	/* Diagonal neighbors */
+	index += (map[i - 1][j - 1] - '0' != 0) << 4;
+	index += (map[i - 1][j + 1] - '0' != 0) << 5;
+	index += (map[i + 1][j - 1] - '0' != 0) << 6;
+	index += (map[i + 1][j + 1] - '0' != 0) << 7;
+	return (index);
+}
+
+
+#define TILE_W 8
+#define TILE_H 8
+
+#define MAP_LEFT		0b00000001
+#define MAP_TOP			0b00000010
+#define MAP_RIGHT		0b00000100
+#define MAP_BOTTOM		0b00001000
+#define MAP_TOP_LEFT	0b00010000
+#define MAP_TOP_RIGHT	0b00100000
+#define MAP_BOT_LEFT	0b01000000
+#define MAP_BOT_RIGHT	0b10000000
+
+# define MLX_PINK 0x00d6428e
+# define MLX_PALE_GRAY 0xf8f8f8
+
+static inline __attribute__((always_inline, unused))
+u_int	get_tile_pix(int x, int y, int idx)
+{
+	int	is_edge = 0;
+
+	/* Direct neighbors */
+	if (idx & MAP_LEFT && x == 0)
+		is_edge = 1;
+	if (idx & MAP_RIGHT && x == TILE_W - 1)
+		is_edge = 1;
+	if (idx & MAP_BOTTOM && y == 0)
+		is_edge = 1;
+	if (idx & MAP_TOP && y == TILE_H - 1)
+		is_edge = 1;
+	/* Diagonal neighbors */
+	if ((idx & MAP_BOT_LEFT) && x == 0 && y == 0)
+		is_edge = 1;
+	if ((idx & MAP_BOT_RIGHT) && x == TILE_W - 1 && y == 0)
+		is_edge = 1;
+	if ((idx & MAP_TOP_LEFT) && x == 0 && y == TILE_H - 1)
+		is_edge = 1;
+	if ((idx & MAP_TOP_RIGHT) && x == TILE_W - 1 && y == TILE_H - 1)
+		is_edge = 1;
+	return (-(is_edge) & MLX_PALE_GRAY) | (MLX_PINK & ~(-(is_edge)));
+}
+
+typedef struct s_texture
+{
+	u_int	*data;
+	int		w;
+	int		h;
+	int		sl;
+}	t_texture;
+
+typedef struct s_ivect
+{
+	int	x;
+	int	y;
+}	t_ivect;
+
+static t_texture	get_tile(int idx)
+{
+	t_ivect		it;
+	t_texture	tex;
+	u_int32_t	*row;
+
+	tex = (t_texture){.w = TILE_W, .h = TILE_H, .sl = TILE_W * sizeof(int)};
+	tex.data = malloc(sizeof(u_int32_t) * TILE_W * TILE_H);
+	if (tex.data != NULL)
+	{
+		it.y = -1;
+		while (++it.y < TILE_H)
+		{
+			row = tex.data + it.y * TILE_W;
+			it.x = -1;
+			while (++it.x < TILE_W)
+				row[it.x] = get_tile_pix(it.x, it.y, idx);
+		}
+	}
+	return (tex);
 }
